@@ -1,13 +1,41 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Función para crear cliente Supabase seguro
+function createSupabaseClient(): SupabaseClient {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase environment variables not configured. Using fallback.');
+    
+    // Cliente dummy que no falla
+    return createClient(
+      'https://dummy.supabase.co', 
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1bW15IiwiaWF0IjoxNjAwMDAwMDAwLCJleHAiOjE5MTU0NTg0MDB9.dummy-key',
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+        global: {
+          headers: {
+            'x-dummy-mode': 'true'
+          }
+        }
+      }
+    );
+  }
 
-const { data, error } = await supabase
-  .from('todos')
-  .select()
+  return createClient(supabaseUrl, supabaseAnonKey);
+}
+
+// Exportar cliente único
+export const supabase = createSupabaseClient();
+
+// Helper para verificar si Supabase está configurado
+export const isSupabaseConfigured = (): boolean => {
+  return !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+};
 
 // Types for our database
 export interface DatabaseProperty {
