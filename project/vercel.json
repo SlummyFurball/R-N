@@ -31,8 +31,8 @@
     }
   ],
   "functions": {
-    "api/**/*.php": {
-      "runtime": "now-php@1.0.0"
+    "api/**/*.js": {
+      "runtime": "@vercel/node@2.5.10"
     }
   }
 }
