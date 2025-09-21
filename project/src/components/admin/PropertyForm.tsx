@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Trash2, Plus } from 'lucide-react';
+import { X, Upload, Trash2, Plus, Image as ImageIcon } from 'lucide-react';
 import { Property } from '../../types';
 
 interface PropertyFormProps {
@@ -26,6 +26,7 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }
   });
 
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (property) {
@@ -85,6 +86,35 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }
   const removeImage = (index: number) => {
     const newImages = formData.images.filter((_, i) => i !== index);
     setFormData(prev => ({ ...prev, images: newImages }));
+  };
+  
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      // TODO: Implement actual image upload to Supabase Storage
+      // For now, we'll simulate the upload and use a placeholder
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Simulate uploaded image URL
+      const simulatedUrl = `https://images.pexels.com/photos/${Math.floor(Math.random() * 1000000)}/pexels-photo-${Math.floor(Math.random() * 1000000)}.jpeg?auto=compress&cs=tinysrgb&w=800`;
+      
+      // Add to images array
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images.filter(img => img.trim() !== ''), simulatedUrl, '']
+      }));
+      
+      // Reset file input
+      e.target.value = '';
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error al subir la imagen. Intenta de nuevo.');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -326,22 +356,66 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }
             {/* Images */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Imágenes (URLs)
+                Imágenes
               </label>
+              
+              {/* Image Upload Button */}
+              <div className="mb-4">
+                <label className="flex items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    {uploadingImage ? (
+                      <>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#002430] mb-2"></div>
+                        <p className="text-sm text-gray-500">Subiendo imagen...</p>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-8 h-8 mb-2 text-gray-400" />
+                        <p className="mb-2 text-sm text-gray-500">
+                          <span className="font-semibold">Haz clic para subir</span> una imagen
+                        </p>
+                        <p className="text-xs text-gray-500">PNG, JPG o JPEG (MAX. 5MB)</p>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploadingImage}
+                  />
+                </label>
+              </div>
+              
+              {/* URL Input Fields */}
               <div className="space-y-2">
+                <p className="text-sm text-gray-600 mb-2">O ingresa URLs manualmente:</p>
                 {formData.images.map((image, index) => (
                   <div key={index} className="flex items-center space-x-2">
+                    {image && (
+                      <img
+                        src={image}
+                        alt={`Preview ${index + 1}`}
+                        className="w-12 h-12 object-cover rounded border"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
                     <input
                       type="url"
                       value={image}
                       onChange={(e) => handleImageChange(index, e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                      className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent ${
+                        image ? 'bg-green-50' : ''
+                      }`}
                       placeholder="https://ejemplo.com/imagen.jpg"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-red-600 hover:text-red-800 p-1"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -356,6 +430,9 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }
                   <span>Agregar imagen</span>
                 </button>
               </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Recomendamos subir al menos 3 imágenes de alta calidad. La primera imagen será la principal.
+              </p>
             </div>
 
             {/* Form Actions */}
