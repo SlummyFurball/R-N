@@ -8,17 +8,37 @@ const AdminLogin: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const { signIn } = useAuth();
+
+  // Debug info on component mount
+  React.useEffect(() => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    let debug = `Environment: ${import.meta.env.MODE}\n`;
+    debug += `Supabase URL: ${supabaseUrl ? 'Configured' : 'Missing'}\n`;
+    debug += `Supabase Key: ${supabaseKey ? 'Configured' : 'Missing'}\n`;
+    debug += `URL Preview: ${supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'N/A'}`;
+    
+    setDebugInfo(debug);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        console.error('Sign in error details:', error);
+        setError(`Error: ${error.message}\nCode: ${error.status || 'Unknown'}`);
+      }
+    } catch (err) {
+      console.error('Network or connection error:', err);
+      setError(`Connection Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
     
     setLoading(false);
@@ -41,7 +61,17 @@ const AdminLogin: React.FC = () => {
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
               <AlertCircle className="text-red-500" size={20} />
-              <span className="text-red-700 text-sm">{error}</span>
+              <div className="text-red-700 text-sm">
+                <pre className="whitespace-pre-wrap">{error}</pre>
+              </div>
+            </div>
+          )}
+
+          {/* Debug Info (only in development or when there's an error) */}
+          {(import.meta.env.DEV || error) && debugInfo && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-semibold text-blue-800 mb-2">Debug Info:</h4>
+              <pre className="text-blue-700 text-xs whitespace-pre-wrap">{debugInfo}</pre>
             </div>
           )}
 
