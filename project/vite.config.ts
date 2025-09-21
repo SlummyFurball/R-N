@@ -14,13 +14,19 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
           utils: ['lucide-react']
         }
       }
-    }
+    },
+    // Asegurar que el build funcione en Vercel
+    target: 'es2015',
+    cssCodeSplit: true
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
+    include: ['react', 'react-dom', 'react-router-dom', '@supabase/supabase-js']
   },
   server: {
     port: 3000,
@@ -29,5 +35,13 @@ export default defineConfig({
   preview: {
     port: 3000,
     host: true
+  },
+  // Configuración para evitar errores de módulos en production
+  define: {
+    global: 'globalThis',
+  },
+  // Asegurar compatibilidad con Vercel
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' }
   }
 });
