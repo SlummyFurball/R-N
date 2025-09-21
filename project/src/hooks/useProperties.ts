@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, DatabaseProperty, DatabaseAgent } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, DatabaseProperty, DatabaseAgent } from '../lib/supabase';
 import { Property } from '../types';
 
 export const useProperties = () => {
@@ -10,6 +10,15 @@ export const useProperties = () => {
   const fetchProperties = async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      // Si Supabase no está configurado, retornar array vacío
+      if (!isSupabaseConfigured()) {
+        console.log('📝 Supabase not configured, using static data fallback');
+        setProperties([]);
+        return;
+      }
+
       const { data: propertiesData, error: propertiesError } = await supabase
         .from('properties')
         .select(`
@@ -19,7 +28,11 @@ export const useProperties = () => {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      if (propertiesError) throw propertiesError;
+      if (propertiesError) {
+        console.warn('Supabase query error:', propertiesError);
+        setProperties([]);
+        return;
+      }
 
       // Transform database properties to frontend format
       const transformedProperties: Property[] = propertiesData?.map((prop: any) => ({
@@ -48,10 +61,10 @@ export const useProperties = () => {
       })) || [];
 
       setProperties(transformedProperties);
-      setError(null);
     } catch (err) {
-      console.error('Error fetching properties:', err);
-      setError(err instanceof Error ? err.message : 'Error fetching properties');
+      console.warn('Error fetching properties:', err);
+      // En caso de error, usar fallback
+      setProperties([]);
     } finally {
       setLoading(false);
     }
