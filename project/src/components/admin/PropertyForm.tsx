@@ -189,9 +189,9 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, 
         features: cleanedData.features,
         agent: selectedAgent
       };
-      await onSave(propertyData, !!property);
       
-      // Close form on success
+      console.log('Saving property:', propertyData);
+      await onSave(propertyData, !!property);
       onClose();
     } catch (error) {
       console.error('Error saving property:', error);
