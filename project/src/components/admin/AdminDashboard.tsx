@@ -6,6 +6,7 @@ import { useProperties } from '../../hooks/useProperties';
 import { useAgents } from '../../hooks/useAgents';
 import { useBlogPosts } from '../../hooks/useBlogPosts';
 import { useServices } from '../../hooks/useServices';
+import PropertyViewer from './PropertyViewer';
 import PropertyForm from './PropertyForm';
 import AgentForm from './AgentForm';
 import BlogPostForm from './BlogPostForm';
@@ -19,6 +20,7 @@ const AdminDashboard: React.FC = () => {
   const { services: allServices, loading: servicesLoading, refetch: refetchServices, createService, updateService, deleteService } = useServices();
   
   const [activeTab, setActiveTab] = useState('properties');
+  const [viewingProperty, setViewingProperty] = useState(null);
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
   const [showAgentForm, setShowAgentForm] = useState(false);
@@ -40,6 +42,10 @@ const AdminDashboard: React.FC = () => {
   const handleEditProperty = useCallback((property: any) => {
     setEditingProperty(property);
     setShowPropertyForm(true);
+  }, []);
+
+  const handleViewProperty = useCallback((property: any) => {
+    setViewingProperty(property);
   }, []);
 
   const handleDeleteProperty = useCallback(async (propertyId: string) => {
@@ -377,7 +383,10 @@ const AdminDashboard: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
-                              <button className="text-blue-600 hover:text-blue-900">
+                              <button 
+                                onClick={() => handleViewProperty(property)}
+                                className="text-blue-600 hover:text-blue-900"
+                              >
                                 <Eye size={16} />
                               </button>
                               <button 
@@ -649,6 +658,14 @@ const AdminDashboard: React.FC = () => {
       </div>
       
       {/* Modals - CORREGIDOS */}
+      {viewingProperty && (
+        <PropertyViewer
+          property={viewingProperty}
+          isOpen={!!viewingProperty}
+          onClose={() => setViewingProperty(null)}
+        />
+      )}
+      
       {showAgentForm && (
         <AgentForm
           agent={editingAgent}
