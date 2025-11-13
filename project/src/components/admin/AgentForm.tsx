@@ -17,7 +17,8 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
     phone: '',
     email: '',
     photo: '',
-    experience: ''
+    experience: '',
+    description: ''
   });
 
   const [loading, setLoading] = useState(false);
