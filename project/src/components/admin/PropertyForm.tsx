@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Trash2, Plus, Image as ImageIcon } from 'lucide-react';
-import { Property } from '../../types';
+import { Property, Agent } from '../../types';
+import { supabase } from '../../lib/supabase';
 
 interface PropertyFormProps {
   property?: Property | null;
+  agents: Agent[];
   onClose: () => void;
-  onSave: () => void;
+  onSave: (propertyData: any, isEdit: boolean) => Promise<void>;
 }
 
-const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }) => {
+const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     title: '',
     price: 0,
@@ -92,26 +94,54 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona solo archivos de imagen');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen debe ser menor a 5MB');
+      return;
+    }
+
     setUploadingImage(true);
+    
     try {
-      // TODO: Implement actual image upload to Supabase Storage
-      // For now, we'll simulate the upload and use a placeholder
-      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       
-      // Simulate uploaded image URL
-      const simulatedUrl = `https://images.pexels.com/photos/${Math.floor(Math.random() * 1000000)}/pexels-photo-${Math.floor(Math.random() * 1000000)}.jpeg?auto=compress&cs=tinysrgb&w=800`;
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('property-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+      
+      if (error) throw error;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('property-images')
+        .getPublicUrl(data.path);
       
       // Add to images array
       setFormData(prev => ({
         ...prev,
-        images: [...prev.images.filter(img => img.trim() !== ''), simulatedUrl, '']
+        images: [...prev.images.filter(img => img.trim() !== ''), publicUrl, '']
       }));
+      
+      console.log(`Imagen "${file.name}" subida exitosamente`);
       
       // Reset file input
       e.target.value = '';
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Error al subir la imagen. Intenta de nuevo.');
+      alert(`Error al subir la imagen: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setUploadingImage(false);
     }
@@ -129,15 +159,32 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }
         images: formData.images.filter(img => img.trim() !== ''),
       };
 
-      // TODO: Implement actual save to Supabase
-      console.log('Saving property:', cleanedData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      onSave();
+      // Find the selected agent
+      const selectedAgent = agents.find(agent => agent.id === cleanedData.agent_id);
+      if (!selectedAgent) {
+        throw new Error('Agente seleccionado no encontrado');
+      }
+
+      const propertyData = {
+        title: cleanedData.title,
+        price: cleanedData.price,
+        currency: cleanedData.currency,
+        type: cleanedData.type,
+        location: cleanedData.location,
+        bedrooms: cleanedData.bedrooms,
+        bathrooms: cleanedData.bathrooms,
+        area: cleanedData.area,
+        parking: cleanedData.parking,
+        images: cleanedData.images,
+        description: cleanedData.description,
+        features: cleanedData.features,
+        agent: selectedAgent
+      };
+
+      await onSave(propertyData, !!property);
     } catch (error) {
       console.error('Error saving property:', error);
+      alert(`Error al ${property ? 'actualizar' : 'crear'} la propiedad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
@@ -229,18 +276,37 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo *
+                  Agente Asignado *
                 </label>
                 <select
-                  name="type"
-                  value={formData.type}
+                  name="agent_id"
+                  value={formData.agent_id}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 >
-                  <option value="venta">Venta</option>
-                  <option value="alquiler">Alquiler</option>
+                  {agents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name} - {agent.role}
+                    </option>
+                  ))}
                 </select>
               </div>
+            </div>
+
+            {/* Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo *
+              </label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+              >
+                <option value="venta">Venta</option>
+                <option value="alquiler">Alquiler</option>
+              </select>
             </div>
 
             {/* Property Details */}
@@ -416,6 +482,7 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }
                       type="button"
                       onClick={() => removeImage(index)}
                       className="text-red-600 hover:text-red-800 p-1"
+                      disabled={formData.images.length <= 1}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -431,7 +498,7 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }
                 </button>
               </div>
               <p className="text-sm text-gray-500 mt-2">
-                Recomendamos subir al menos 3 imágenes de alta calidad. La primera imagen será la principal.
+                <strong>Importante:</strong> Debes tener al menos 1 imagen. Recomendamos 3+ imágenes de alta calidad. La primera será la imagen principal.
               </p>
             </div>
 
