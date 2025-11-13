@@ -8,7 +8,8 @@ export const teamMembers: Agent[] = [
     photo: 'https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=400',
     phone: '+1-809-798-5428',
     email: 'roberto@rnparadisse.com',
-    experience: '15+ años'
+    experience: '15+ años',
+    description: 'Fundador y líder visionario con más de 15 años de experiencia en el sector inmobiliario dominicano.'
   },
   {
     id: '2',
@@ -17,7 +18,8 @@ export const teamMembers: Agent[] = [
     photo: 'https://images.pexels.com/photos/3785077/pexels-photo-3785077.jpeg?auto=compress&cs=tinysrgb&w=400',
     phone: '+1-809-798-5428',
     email: 'natalia@rnparadisse.com',
-    experience: '8+ años'
+    experience: '8+ años',
+    description: 'Experta en ventas residenciales con un enfoque personalizado que garantiza la satisfacción del cliente.'
   },
   {
     id: '3',
@@ -26,7 +28,8 @@ export const teamMembers: Agent[] = [
     photo: 'https://images.pexels.com/photos/3778876/pexels-photo-3778876.jpeg?auto=compress&cs=tinysrgb&w=400',
     phone: '+1-809-798-5428',
     email: 'carlos@rnparadisse.com',
-    experience: '12+ años'
+    experience: '12+ años',
+    description: 'Tasador certificado con amplia experiencia en evaluación de propiedades residenciales y comerciales.'
   },
   {
     id: '4',
@@ -35,6 +38,7 @@ export const teamMembers: Agent[] = [
     photo: 'https://images.pexels.com/photos/3777943/pexels-photo-3777943.jpeg?auto=compress&cs=tinysrgb&w=400',
     phone: '+1-809-798-5428',
     email: 'maria@rnparadisse.com',
-    experience: '10+ años'
+    experience: '10+ años',
+    description: 'Asesora financiera especializada en hipotecas con conexiones en las principales entidades bancarias.'
   }
 ];
