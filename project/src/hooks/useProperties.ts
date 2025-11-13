@@ -11,17 +11,18 @@ export const useProperties = (shouldRefetch = false) => {
   const fetchProperties = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // If Supabase is not configured, use static data
       if (!isSupabaseConfigured()) {
-        console.log('Supabase not configured, using static data');
+        console.log('🔧 Supabase not configured, using static data');
         setProperties(staticProperties);
-        setError(null);
-        setLoading(false);
         return;
       }
 
-      // Only attempt Supabase request if properly configured
+      console.log('🔄 Fetching properties from Supabase...');
+      
+      // Attempt to fetch from Supabase first
       const { data: propertiesData, error: propertiesError } = await supabase
         .from('properties')
         .select(`
@@ -32,21 +33,64 @@ export const useProperties = (shouldRefetch = false) => {
         .order('created_at', { ascending: false });
 
       if (propertiesError) {
-        // If tables don't exist, fall back to static data
+        console.warn('⚠️ Supabase error:', propertiesError.message);
+        
+        // If tables don't exist or JWT expired, fall back to static data
         if (propertiesError.code === 'PGRST116' || 
+            propertiesError.code === 'PGRST303' ||
             propertiesError.message?.includes('table') ||
             propertiesError.message?.includes('schema cache')) {
-          console.warn('Supabase tables not found, using static data:', propertiesError.message);
+          console.log('📋 Using static data as fallback');
           setProperties(staticProperties);
-          setError(null);
-          setLoading(false);
           return;
         }
         throw propertiesError;
       }
 
+      // If no data returned, try to initialize with static data
+      if (!propertiesData || propertiesData.length === 0) {
+        console.log('📝 No properties found, initializing with static data...');
+        await initializePropertiesData();
+        
+        // Try fetching again after initialization
+        const { data: newData } = await supabase
+          .from('properties')
+          .select(`
+            *,
+            agents (*)
+          `)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+        
+        if (newData && newData.length > 0) {
+          const transformedProperties = transformPropertiesData(newData);
+          setProperties(transformedProperties);
+          console.log('✅ Properties initialized and loaded from database');
+          return;
+        }
+        
+        // If initialization failed, use static data
+        console.log('📋 Initialization failed, using static data');
+        setProperties(staticProperties);
+        return;
+      }
       // Transform database properties to frontend format
-      const transformedProperties: Property[] = propertiesData?.map((prop: any) => ({
+      const transformedProperties = transformPropertiesData(propertiesData);
+      setProperties(transformedProperties);
+      console.log(`✅ Loaded ${transformedProperties.length} properties from database`);
+      
+    } catch (err) {
+      console.warn('❌ Error fetching properties, falling back to static data:', err);
+      setProperties(staticProperties);
+      setError(null); // Don't show error to user, fallback is normal
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to transform database data
+  const transformPropertiesData = (data: any[]): Property[] => {
+    return data.map((prop: any) => ({
         id: prop.id,
         title: prop.title,
         price: prop.price,
@@ -69,17 +113,61 @@ export const useProperties = (shouldRefetch = false) => {
           photo: prop.agents.photo,
           experience: prop.agents.experience,
         },
-      })) || [];
+      }));
+  };
 
-      setProperties(transformedProperties);
-      setError(null);
+  // Helper function to initialize properties data
+  const initializePropertiesData = async () => {
+    if (!isSupabaseConfigured()) return false;
+    
+    try {
+      // First, ensure agents exist
+      const { data: agents } = await supabase
+        .from('agents')
+        .select('id, name')
+        .eq('is_active', true);
+      
+      if (!agents || agents.length === 0) {
+        console.warn('No agents found, cannot initialize properties');
+        return false;
+      }
+      
+      // Map static properties to use real agent IDs
+      const propertiesWithRealAgents = staticProperties.map(prop => ({
+        id: prop.id,
+        title: prop.title,
+        price: prop.price,
+        currency: prop.currency,
+        type: prop.type,
+        location: prop.location,
+        bedrooms: prop.bedrooms,
+        bathrooms: prop.bathrooms,
+        area: prop.area,
+        parking: prop.parking,
+        images: prop.images,
+        description: prop.description,
+        features: prop.features,
+        agent_id: agents[0]?.id || prop.agent.id, // Use first available agent
+        is_active: true
+      }));
+      
+      const { error: insertError } = await supabase
+        .from('properties')
+        .upsert(propertiesWithRealAgents, { 
+          onConflict: 'id',
+          ignoreDuplicates: true 
+        });
+      
+      if (insertError) {
+        console.warn('Could not initialize properties:', insertError);
+        return false;
+      }
+      
+      console.log('✅ Properties initialized successfully');
+      return true;
     } catch (err) {
-      console.warn('Error fetching properties from Supabase, falling back to static data:', err);
-      // Always fall back to static data on any error
-      setProperties(staticProperties);
-      setError(null);
-    } finally {
-      setLoading(false);
+      console.warn('Error initializing properties:', err);
+      return false;
     }
   };
 
