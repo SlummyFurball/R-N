@@ -1,5 +1,5 @@
 import React from 'react';
-import { useServices } from '../hooks/useServices';
+import { services } from '../data/services';
 import { 
   Calculator, 
   FileText, 
@@ -28,8 +28,6 @@ const iconMap = {
 };
 
 const Services: React.FC = () => {
-  const { services, loading } = useServices();
-
   const handleServiceClick = (serviceName: string) => {
     const message = `Hola, me interesa obtener más información sobre el servicio de ${serviceName}`;
     const whatsappUrl = createWhatsAppUrl('+1-809-798-5428', message);
@@ -52,38 +50,31 @@ const Services: React.FC = () => {
           </p>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Cargando servicios...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {services.map((service) => {
-              const IconComponent = iconMap[service.icon as keyof typeof iconMap] || Calculator;
-              
-              return (
-                <div
-                  key={service.id}
-                  onClick={() => handleServiceClick(service.title)}
-                  className="bg-[#f4f4f2] p-6 rounded-xl hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group"
-                >
-                  <div className="text-[#002430] mb-4 group-hover:text-yellow-600 transition-colors duration-200">
-                    <IconComponent size={32} />
-                  </div>
-                  
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3 group-hover:text-[#002430] transition-colors duration-200">
-                    {service.title}
-                  </h3>
-                  
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    {service.description}
-                  </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {services.map((service) => {
+            const IconComponent = iconMap[service.icon as keyof typeof iconMap] || Calculator;
+            
+            return (
+              <div
+                key={service.id}
+                onClick={() => handleServiceClick(service.title)}
+                className="bg-[#f4f4f2] p-6 rounded-xl hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group"
+              >
+                <div className="text-[#002430] mb-4 group-hover:text-yellow-600 transition-colors duration-200">
+                  <IconComponent size={32} />
                 </div>
-              );
-            })}
-          </div>
-        )}
+                
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 group-hover:text-[#002430] transition-colors duration-200">
+                  {service.title}
+                </h3>
+                
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {service.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
 
         <div className="text-center mt-12">
           <p className="text-gray-600 mb-6">
