@@ -159,6 +159,15 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, 
         images: formData.images.filter(img => img.trim() !== ''),
       };
 
+      // Validate required fields
+      if (!cleanedData.title || !cleanedData.location || !cleanedData.description) {
+        throw new Error('Por favor completa todos los campos requeridos');
+      }
+
+      if (cleanedData.images.length === 0) {
+        throw new Error('Debes agregar al menos una imagen');
+      }
+
       // Find the selected agent
       const selectedAgent = agents.find(agent => agent.id === cleanedData.agent_id);
       if (!selectedAgent) {
@@ -180,8 +189,10 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, 
         features: cleanedData.features,
         agent: selectedAgent
       };
-
       await onSave(propertyData, !!property);
+      
+      // Close form on success
+      onClose();
     } catch (error) {
       console.error('Error saving property:', error);
       alert(`Error al ${property ? 'actualizar' : 'crear'} la propiedad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
