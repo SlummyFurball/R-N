@@ -1,6 +1,6 @@
 import React from 'react';
 import { MessageCircle, Mail, Phone, Target, Eye, Heart, Lightbulb } from 'lucide-react';
-import { teamMembers } from '../data/team';
+import { useAgents } from '../hooks/useAgents';
 import { createWhatsAppUrl } from '../utils/formatters';
 
 const values = [
@@ -27,6 +27,8 @@ const values = [
 ];
 
 const Team: React.FC = () => {
+  const { agents, loading, error } = useAgents();
+
   const handleWhatsAppClick = (phone: string, name: string) => {
     const message = `Hola ${name}, me interesa obtener más información sobre sus servicios inmobiliarios`;
     const whatsappUrl = createWhatsAppUrl(phone, message);
@@ -55,14 +57,29 @@ const Team: React.FC = () => {
         </div>
 
         {/* Team Members */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
+            <p className="mt-4 text-gray-600">Cargando equipo...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-600">Error al cargar el equipo. Mostrando datos de respaldo.</p>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-          {teamMembers.map((member) => (
+          {agents.map((member) => (
             <div key={member.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
               <div className="aspect-w-3 aspect-h-4">
                 <img
                   src={member.photo}
                   alt={member.name}
                   className="w-full h-64 object-cover"
+                  onError={(e) => {
+                    // Fallback image if the URL fails
+                    (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=400';
+                  }}
                 />
               </div>
               
