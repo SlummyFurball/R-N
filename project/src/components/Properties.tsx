@@ -6,20 +6,20 @@ import PropertyCard from './PropertyCard';
 import PropertyModal from './PropertyModal';
 
 const Properties: React.FC = () => {
-  const { properties, loading, error } = useProperties();
+  const { properties: dbProperties, loading, error } = useProperties();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'todas' | 'venta' | 'alquiler'>('todas');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
   const filteredProperties = useMemo(() => {
-    return properties.filter((property) => {
+    return dbProperties.filter((property) => {
       const matchesSearch = property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            property.location.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = selectedType === 'todas' || property.type === selectedType;
       
       return matchesSearch && matchesType;
     });
-  }, [properties, searchTerm, selectedType]);
+  }, [dbProperties, searchTerm, selectedType]);
 
   const handleViewDetails = (property: Property) => {
     setSelectedProperty(property);
@@ -87,7 +87,9 @@ const Properties: React.FC = () => {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Cargando propiedades...</p>
+            <p className="mt-4 text-gray-600">
+              Cargando propiedades desde base de datos...
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -104,7 +106,7 @@ const Properties: React.FC = () => {
         {filteredProperties.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">
-              No se encontraron propiedades que coincidan con tu búsqueda.
+              {loading ? 'Cargando...' : 'No se encontraron propiedades que coincidan con tu búsqueda.'}
             </p>
             <button
               onClick={() => {
