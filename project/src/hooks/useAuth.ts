@@ -10,7 +10,7 @@ export const useAuth = () => {
   useEffect(() => {
     // If Supabase is not configured, don't attempt auth
     if (!isSupabaseConfigured()) {
-      console.warn('Supabase not configured for authentication');
+      console.warn('Supabase not configured for authenticatAion');
       setLoading(false);
       return;
     }
@@ -43,7 +43,8 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     if (!isSupabaseConfigured()) {
-      return { data: null, error: { message: 'Supabase no está configurado. Verifica las variables de entorno.' } };
+      const error = { message: 'Supabase no está configurado. Verifica las variables de entorno.' };
+      return { data: null, error };
     }
 
     console.log('🚀 Attempting sign in for:', email);
