@@ -121,15 +121,17 @@ const AdminDashboard: React.FC = () => {
           try {
             if (isEdit && editingProperty) {
               await updateProperty(editingProperty.id, propertyData);
+              console.log('Property updated successfully');
             } else {
               await createProperty(propertyData);
+              console.log('Property created successfully');
             }
+            // Refresh the properties list
+            await refetch();
           } catch (error) {
             console.error('Error saving property:', error);
             throw error;
           }
-          setShowPropertyForm(false);
-          setEditingProperty(null);
         }}
       />
     );
