@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase, DatabaseProperty, DatabaseAgent, isSupabaseConfigured } from '../lib/supabase';
 import { Property } from '../types';
 import { properties as staticProperties } from '../data/properties';
 
-export const useProperties = (shouldRefetch = false) => {
+export const useProperties = () => { // Quitar el parámetro shouldRefetch
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProperties = async () => {
+  const fetchProperties = useCallback(async () => { // Agregar useCallback
     try {
       setLoading(true);
       
@@ -72,31 +72,22 @@ export const useProperties = (shouldRefetch = false) => {
       })) || [];
 
       setProperties(transformedProperties);
-      setError(null);
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       console.warn('Error fetching properties from Supabase, falling back to static data:', err);
-      // Always fall back to static data on any error
       setProperties(staticProperties);
-      setError(null);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Sin dependencias
 
-  useEffect(() => {
-    fetchProperties();
-  }, [shouldRefetch]);
+  const createProperty = useCallback(async (propertyData: Omit<Property, 'id'>) => {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado');
+    }
 
-  return {
-    properties,
-    loading,
-    error,
-    refetch: fetchProperties,
-    createProperty: async (propertyData: Omit<Property, 'id'>) => {
-      if (!isSupabaseConfigured()) {
-        throw new Error('Supabase no está configurado');
-      }
-
+    try {
       console.log('Creating property with data:', propertyData);
 
       const { data, error } = await supabase
