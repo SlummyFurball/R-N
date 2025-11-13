@@ -125,7 +125,6 @@ export const useProperties = (shouldRefetch = false) => {
       }
       
       console.log('Property created successfully:', data);
-      await fetchProperties();
       return data;
     },
     updateProperty: async (id: string, propertyData: Partial<Property>) => {
