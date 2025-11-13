@@ -163,6 +163,3 @@ export const staticProperties: Property[] = [
     agent: agents[1]
   }
 ];
-
-// Export properties with fallback to static data
-export const properties = staticProperties;
