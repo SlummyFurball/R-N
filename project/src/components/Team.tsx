@@ -1,6 +1,6 @@
 import React from 'react';
 import { MessageCircle, Mail, Phone, Target, Eye, Heart, Lightbulb } from 'lucide-react';
-import { teamMembers } from '../data/team';
+import { useAgents } from '../hooks/useAgents';
 import { createWhatsAppUrl } from '../utils/formatters';
 
 const values = [
@@ -27,6 +27,8 @@ const values = [
 ];
 
 const Team: React.FC = () => {
+  const { agents: teamMembers, loading } = useAgents();
+
   const handleWhatsAppClick = (phone: string, name: string) => {
     const message = `Hola ${name}, me interesa obtener más información sobre sus servicios inmobiliarios`;
     const whatsappUrl = createWhatsAppUrl(phone, message);
@@ -55,52 +57,59 @@ const Team: React.FC = () => {
         </div>
 
         {/* Team Members */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-          {teamMembers.map((member) => (
-            <div key={member.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-              <div className="aspect-w-3 aspect-h-4">
-                <img
-                  src={member.photo}
-                  alt={member.name}
-                  className="w-full h-64 object-cover"
-                />
-              </div>
-              
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-1">{member.name}</h3>
-                <p className="text-[#002430] font-medium mb-2">{member.role}</p>
-                <p className="text-gray-600 text-sm mb-4">{member.description}</p>
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
+            <p className="mt-4 text-gray-600">Cargando equipo...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+            {teamMembers.map((member) => (
+              <div key={member.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div className="aspect-w-3 aspect-h-4">
+                  <img
+                    src={member.photo}
+                    alt={member.name}
+                    className="w-full h-64 object-cover"
+                  />
+                </div>
                 
-                <div className="text-sm text-gray-500 mb-4">
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-                    {member.experience}
-                  </span>
-                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-1">{member.name}</h3>
+                  <p className="text-[#002430] font-medium mb-2">{member.role}</p>
+                  <p className="text-gray-600 text-sm mb-4">{member.description || 'Profesional especializado en servicios inmobiliarios'}</p>
+                  
+                  <div className="text-sm text-gray-500 mb-4">
+                    <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                      {member.experience}
+                    </span>
+                  </div>
 
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleWhatsAppClick(member.phone, member.name)}
-                    className="flex-1 bg-green-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-green-600 transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <MessageCircle size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleEmailClick(member.email, member.name)}
-                    className="flex-1 bg-blue-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <Mail size={16} />
-                  </button>
-                  <button
-                    onClick={() => window.open(`tel:${member.phone}`, '_self')}
-                    className="flex-1 bg-[#002430] text-white py-2 px-3 rounded-lg font-medium hover:bg-[#003440] transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <Phone size={16} />
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleWhatsAppClick(member.phone, member.name)}
+                      className="flex-1 bg-green-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-green-600 transition-colors duration-200 flex items-center justify-center"
+                    >
+                      <MessageCircle size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleEmailClick(member.email, member.name)}
+                      className="flex-1 bg-blue-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center"
+                    >
+                      <Mail size={16} />
+                    </button>
+                    <button
+                      onClick={() => window.open(`tel:${member.phone}`, '_self')}
+                      className="flex-1 bg-[#002430] text-white py-2 px-3 rounded-lg font-medium hover:bg-[#003440] transition-colors duration-200 flex items-center justify-center"
+                    >
+                      <Phone size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Company Values */}
         <div className="bg-white rounded-xl p-8">
