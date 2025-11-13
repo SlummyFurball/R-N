@@ -127,6 +127,16 @@ export const useBlogPosts = () => {
 
   useEffect(() => {
     fetchBlogPosts();
+  }, []); // Ejecutar solo una vez al montar el componente
+
+  // Refetch cuando la página se enfoca (usuario regresa de otra pestaña)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchBlogPosts();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   return {
