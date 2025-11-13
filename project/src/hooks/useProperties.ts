@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, DatabaseProperty, DatabaseAgent, isSupabaseConfigured } from '../lib/supabase';
 import { Property } from '../types';
-import { properties as staticProperties } from '../data/properties';
+import { staticProperties } from '../data/properties';
 
 export const useProperties = (shouldRefetch = false) => {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -9,18 +9,20 @@ export const useProperties = (shouldRefetch = false) => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchProperties = async () => {
+    console.log('🔄 useProperties: Starting fetch...');
     try {
       setLoading(true);
       setError(null);
       
       // If Supabase is not configured, use static data
       if (!isSupabaseConfigured()) {
-        console.log('🔧 Supabase not configured, using static data');
+        console.log('🔧 useProperties: Supabase not configured, using static data');
         setProperties(staticProperties);
+        setLoading(false);
         return;
       }
 
-      console.log('🔄 Fetching properties from Supabase...');
+      console.log('🔄 useProperties: Fetching from Supabase...');
       
       // Attempt to fetch from Supabase first
       const { data: propertiesData, error: propertiesError } = await supabase
@@ -33,15 +35,16 @@ export const useProperties = (shouldRefetch = false) => {
         .order('created_at', { ascending: false });
 
       if (propertiesError) {
-        console.warn('⚠️ Supabase error:', propertiesError.message);
+        console.warn('⚠️ useProperties: Supabase error:', propertiesError.message);
         
         // If tables don't exist or JWT expired, fall back to static data
         if (propertiesError.code === 'PGRST116' || 
             propertiesError.code === 'PGRST303' ||
             propertiesError.message?.includes('table') ||
             propertiesError.message?.includes('schema cache')) {
-          console.log('📋 Using static data as fallback');
+          console.log('📋 useProperties: Using static data as fallback');
           setProperties(staticProperties);
+          setLoading(false);
           return;
         }
         throw propertiesError;
@@ -49,7 +52,7 @@ export const useProperties = (shouldRefetch = false) => {
 
       // If no data returned, try to initialize with static data
       if (!propertiesData || propertiesData.length === 0) {
-        console.log('📝 No properties found, initializing with static data...');
+        console.log('📝 useProperties: No properties found, initializing...');
         await initializePropertiesData();
         
         // Try fetching again after initialization
@@ -65,22 +68,24 @@ export const useProperties = (shouldRefetch = false) => {
         if (newData && newData.length > 0) {
           const transformedProperties = transformPropertiesData(newData);
           setProperties(transformedProperties);
-          console.log('✅ Properties initialized and loaded from database');
+          console.log('✅ useProperties: Initialized and loaded from database:', transformedProperties.length);
+          setLoading(false);
           return;
         }
         
         // If initialization failed, use static data
-        console.log('📋 Initialization failed, using static data');
+        console.log('📋 useProperties: Initialization failed, using static data');
         setProperties(staticProperties);
+        setLoading(false);
         return;
       }
       // Transform database properties to frontend format
       const transformedProperties = transformPropertiesData(propertiesData);
       setProperties(transformedProperties);
-      console.log(`✅ Loaded ${transformedProperties.length} properties from database`);
+      console.log(`✅ useProperties: Loaded ${transformedProperties.length} properties from database`);
       
     } catch (err) {
-      console.warn('❌ Error fetching properties, falling back to static data:', err);
+      console.warn('❌ useProperties: Error fetching, falling back to static data:', err);
       setProperties(staticProperties);
       setError(null); // Don't show error to user, fallback is normal
     } finally {
@@ -175,6 +180,15 @@ export const useProperties = (shouldRefetch = false) => {
     fetchProperties();
   }, [shouldRefetch]);
 
+  // Debug: Log current state
+  useEffect(() => {
+    console.log('🎯 useProperties state:', { 
+      propertiesCount: properties.length, 
+      loading, 
+      error,
+      firstPropertyTitle: properties[0]?.title 
+    });
+  }, [properties, loading, error]);
   return {
     properties,
     loading,
