@@ -100,6 +100,16 @@ export const useServices = () => {
 
   useEffect(() => {
     fetchServices();
+  }, []); // Ejecutar solo una vez al montar el componente
+
+  // Refetch cuando la página se enfoca (usuario regresa de otra pestaña)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchServices();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   return {
