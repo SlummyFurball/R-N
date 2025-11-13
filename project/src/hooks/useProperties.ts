@@ -97,6 +97,8 @@ export const useProperties = (shouldRefetch = false) => {
         throw new Error('Supabase no está configurado');
       }
 
+      console.log('Creating property with data:', propertyData);
+
       const { data, error } = await supabase
         .from('properties')
         .insert([{
@@ -117,7 +119,12 @@ export const useProperties = (shouldRefetch = false) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
+      
+      console.log('Property created successfully:', data);
       await fetchProperties();
       return data;
     },
