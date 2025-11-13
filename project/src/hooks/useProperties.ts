@@ -1,24 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { useState, useEffect } from 'react';
+import { supabase, DatabaseProperty, DatabaseAgent, isSupabaseConfigured } from '../lib/supabase';
 import { Property } from '../types';
 import { properties as staticProperties } from '../data/properties';
 
-export const useProperties = () => {
+export const useProperties = (shouldRefetch = false) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProperties = useCallback(async () => {
+  const fetchProperties = async () => {
     try {
       setLoading(true);
-      setError(null);
       
+      // If Supabase is not configured, use static data
       if (!isSupabaseConfigured()) {
         console.log('Supabase not configured, using static data');
         setProperties(staticProperties);
+        setError(null);
+        setLoading(false);
         return;
       }
 
+      // Only attempt Supabase request if properly configured
       const { data: propertiesData, error: propertiesError } = await supabase
         .from('properties')
         .select(`
@@ -29,16 +32,20 @@ export const useProperties = () => {
         .order('created_at', { ascending: false });
 
       if (propertiesError) {
-        if (propertiesError.code === 'PGRST205' || 
+        // If tables don't exist, fall back to static data
+        if (propertiesError.code === 'PGRST116' || 
             propertiesError.message?.includes('table') ||
             propertiesError.message?.includes('schema cache')) {
           console.warn('Supabase tables not found, using static data:', propertiesError.message);
           setProperties(staticProperties);
+          setError(null);
+          setLoading(false);
           return;
         }
         throw propertiesError;
       }
 
+      // Transform database properties to frontend format
       const transformedProperties: Property[] = propertiesData?.map((prop: any) => ({
         id: prop.id,
         title: prop.title,
@@ -65,22 +72,31 @@ export const useProperties = () => {
       })) || [];
 
       setProperties(transformedProperties);
+      setError(null);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       console.warn('Error fetching properties from Supabase, falling back to static data:', err);
+      // Always fall back to static data on any error
       setProperties(staticProperties);
-      setError(errorMessage);
+      setError(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const createProperty = useCallback(async (propertyData: Omit<Property, 'id'>) => {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado');
-    }
+  useEffect(() => {
+    fetchProperties();
+  }, [shouldRefetch]);
 
-    try {
+  return {
+    properties,
+    loading,
+    error,
+    refetch: fetchProperties,
+    createProperty: async (propertyData: Omit<Property, 'id'>) => {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase no está configurado');
+      }
+
       console.log('Creating property with data:', propertyData);
 
       const { data, error } = await supabase
@@ -109,20 +125,13 @@ export const useProperties = () => {
       }
       
       console.log('Property created successfully:', data);
-      await fetchProperties();
       return data;
-    } catch (err) {
-      console.error('Error creating property:', err);
-      throw err;
-    }
-  }, [fetchProperties]);
+    },
+    updateProperty: async (id: string, propertyData: Partial<Property>) => {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase no está configurado');
+      }
 
-  const updateProperty = useCallback(async (id: string, propertyData: Partial<Property>) => {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado');
-    }
-
-    try {
       const updateData: any = {};
       if (propertyData.title) updateData.title = propertyData.title;
       if (propertyData.price) updateData.price = propertyData.price;
@@ -146,46 +155,21 @@ export const useProperties = () => {
         .single();
 
       if (error) throw error;
-      
       await fetchProperties();
       return data;
-    } catch (err) {
-      console.error('Error updating property:', err);
-      throw err;
-    }
-  }, [fetchProperties]);
+    },
+    deleteProperty: async (id: string) => {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase no está configurado');
+      }
 
-  const deleteProperty = useCallback(async (id: string) => {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado');
-    }
-
-    try {
       const { error } = await supabase
         .from('properties')
         .update({ is_active: false })
         .eq('id', id);
 
       if (error) throw error;
-      
       await fetchProperties();
-    } catch (err) {
-      console.error('Error deleting property:', err);
-      throw err;
     }
-  }, [fetchProperties]);
-
-  useEffect(() => {
-    fetchProperties();
-  }, [fetchProperties]);
-
-  return {
-    properties,
-    loading,
-    error,
-    refetch: fetchProperties,
-    createProperty,
-    updateProperty,
-    deleteProperty
   };
 };
