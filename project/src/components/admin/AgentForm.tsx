@@ -1,44 +1,150 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, User, Mail, Phone, Briefcase } from 'lucide-react';
-import { Agent } from '../../types';
+import { X, Upload, Trash2, Plus, Image as ImageIcon } from 'lucide-react';
+import { Property, Agent } from '../../types';
+import { supabase } from '../../lib/supabase';
 
-interface AgentFormProps {
-  agent?: Agent | null;
+interface PropertyFormProps {
+  property?: Property | null;
+  agents: Agent[];
   onClose: () => void;
   onSave: () => void;
 }
 
-const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
+const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    role: '',
-    phone: '',
-    email: '',
-    photo: '',
-    experience: ''
+    title: '',
+    price: 0,
+    currency: 'USD',
+    type: 'venta' as 'venta' | 'alquiler',
+    location: '',
+    bedrooms: 1,
+    bathrooms: 1,
+    area: 0,
+    parking: 0,
+    description: '',
+    features: [''],
+    images: [''],
+    agent_id: '1', // Default agent
   });
 
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
-    if (agent) {
+    if (property) {
       setFormData({
-        name: agent.name,
-        role: agent.role,
-        phone: agent.phone,
-        email: agent.email,
-        photo: agent.photo,
-        experience: agent.experience
+        title: property.title,
+        price: property.price,
+        currency: property.currency,
+        type: property.type,
+        location: property.location,
+        bedrooms: property.bedrooms,
+        bathrooms: property.bathrooms,
+        area: property.area,
+        parking: property.parking,
+        description: property.description,
+        features: property.features.length > 0 ? property.features : [''],
+        images: property.images.length > 0 ? property.images : [''],
+        agent_id: property.agent.id,
       });
     }
-  }, [agent]);
+  }, [property]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === 'price' || name === 'bedrooms' || name === 'bathrooms' || name === 'area' || name === 'parking'
+        ? Number(value)
+        : value
     }));
+  };
+
+  const handleFeatureChange = (index: number, value: string) => {
+    const newFeatures = [...formData.features];
+    newFeatures[index] = value;
+    setFormData(prev => ({ ...prev, features: newFeatures }));
+  };
+
+  const addFeature = () => {
+    setFormData(prev => ({ ...prev, features: [...prev.features, ''] }));
+  };
+
+  const removeFeature = (index: number) => {
+    const newFeatures = formData.features.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, features: newFeatures }));
+  };
+
+  const handleImageChange = (index: number, value: string) => {
+    const newImages = [...formData.images];
+    newImages[index] = value;
+    setFormData(prev => ({ ...prev, images: newImages }));
+  };
+
+  const addImage = () => {
+    setFormData(prev => ({ ...prev, images: [...prev.images, ''] }));
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = formData.images.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, images: newImages }));
+  };
+  
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona solo archivos de imagen');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen debe ser menor a 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    
+    try {
+
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('property-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+      
+      if (error) throw error;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('property-images')
+        .getPublicUrl(data.path);
+      
+      // Add to images array
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images.filter(img => img.trim() !== ''), publicUrl, '']
+      }));
+      
+      console.log(`Imagen "${file.name}" subida exitosamente`);
+      
+      // Reset file input
+      e.target.value = '';
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert(`Error al subir la imagen: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,15 +152,49 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
     setLoading(true);
 
     try {
-      // TODO: Implement actual save to Supabase
-      console.log('Saving agent:', formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Filter out empty features and images
+      const cleanedData = {
+        ...formData,
+        features: formData.features.filter(f => f.trim() !== ''),
+        images: formData.images.filter(img => img.trim() !== ''),
+      };
+
+      // Find the selected agent
+      const selectedAgent = agents.find(agent => agent.id === cleanedData.agent_id);
+      if (!selectedAgent) {
+        throw new Error('Agente seleccionado no encontrado');
+      }
+
+      const propertyData = {
+        title: cleanedData.title,
+        price: cleanedData.price,
+        currency: cleanedData.currency,
+        type: cleanedData.type,
+        location: cleanedData.location,
+        bedrooms: cleanedData.bedrooms,
+        bathrooms: cleanedData.bathrooms,
+        area: cleanedData.area,
+        parking: cleanedData.parking,
+        images: cleanedData.images,
+        description: cleanedData.description,
+        features: cleanedData.features,
+        agent: selectedAgent
+      };
+
+      if (property) {
+        // Update existing property
+        const { updateProperty } = await import('../../hooks/useProperties');
+        await updateProperty(property.id, propertyData);
+      } else {
+        // Create new property
+        const { createProperty } = await import('../../hooks/useProperties');
+        await createProperty(propertyData);
+      }
       
       onSave();
     } catch (error) {
-      console.error('Error saving agent:', error);
+      console.error('Error saving property:', error);
+      alert(`Error al ${property ? 'actualizar' : 'crear'} la propiedad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
@@ -63,11 +203,11 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
       <div className="flex items-center justify-center min-h-screen p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="flex justify-between items-center p-6 border-b border-gray-200">
             <h2 className="text-2xl font-bold text-gray-900">
-              {agent ? 'Editar Agente' : 'Nuevo Agente'}
+              {property ? 'Editar Propiedad' : 'Nueva Propiedad'}
             </h2>
             <button
               onClick={onClose}
@@ -79,130 +219,296 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Photo Preview */}
-            {formData.photo && (
-              <div className="text-center">
-                <img
-                  src={formData.photo}
-                  alt="Preview"
-                  className="w-24 h-24 rounded-full object-cover mx-auto mb-4"
-                />
-              </div>
-            )}
-
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre Completo *
+                  Título *
                 </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    placeholder="Ej: Roberto Núñez"
-                  />
-                </div>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  placeholder="Ej: Villa Moderna en Punta Cana"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cargo/Posición *
+                  Ubicación *
                 </label>
-                <div className="relative">
-                  <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                  <input
-                    type="text"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    placeholder="Ej: Director Ejecutivo"
-                  />
-                </div>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  placeholder="Ej: Punta Cana, La Altagracia"
+                />
               </div>
             </div>
 
-            {/* Contact Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Price and Type */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
+                  Precio *
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    placeholder="roberto@rnparadisse.com"
-                  />
-                </div>
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  required
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Teléfono *
+                  Moneda
                 </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    placeholder="+1-809-798-5428"
-                  />
-                </div>
+                <select
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                >
+                  <option value="USD">USD</option>
+                  <option value="DOP">DOP</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Agente Asignado *
+                </label>
+                <select
+                  name="agent_id"
+                  value={formData.agent_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                >
+                  {agents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name} - {agent.role}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* Experience */}
+            {/* Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Experiencia *
+                Tipo *
               </label>
-              <input
-                type="text"
-                name="experience"
-                value={formData.experience}
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+              >
+                <option value="venta">Venta</option>
+                <option value="alquiler">Alquiler</option>
+              </select>
+            </div>
+
+            {/* Property Details */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Habitaciones
+                </label>
+                <input
+                  type="number"
+                  name="bedrooms"
+                  value={formData.bedrooms}
+                  onChange={handleInputChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Baños
+                </label>
+                <input
+                  type="number"
+                  name="bathrooms"
+                  value={formData.bathrooms}
+                  onChange={handleInputChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Área (m²)
+                </label>
+                <input
+                  type="number"
+                  name="area"
+                  value={formData.area}
+                  onChange={handleInputChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Estacionamientos
+                </label>
+                <input
+                  type="number"
+                  name="parking"
+                  value={formData.parking}
+                  onChange={handleInputChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Descripción *
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                placeholder="Ej: 15+ años"
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
+                placeholder="Describe la propiedad en detalle..."
               />
             </div>
 
-            {/* Photo URL */}
+            {/* Features */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                URL de la Foto *
+                Características
               </label>
-              <div className="relative">
-                <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                <input
-                  type="url"
-                  name="photo"
-                  value={formData.photo}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                  placeholder="https://ejemplo.com/foto.jpg"
-                />
+              <div className="space-y-2">
+                {formData.features.map((feature, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={feature}
+                      onChange={(e) => handleFeatureChange(index, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                      placeholder="Ej: Piscina privada"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeFeature(index)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addFeature}
+                  className="flex items-center space-x-2 text-[#002430] hover:text-yellow-600"
+                >
+                  <Plus size={18} />
+                  <span>Agregar característica</span>
+                </button>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Ingresa la URL de una imagen profesional del agente
+            </div>
+
+            {/* Images */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Imágenes
+              </label>
+              
+              {/* Image Upload Button */}
+              <div className="mb-4">
+                <label className="flex items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    {uploadingImage ? (
+                      <>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#002430] mb-2"></div>
+                        <p className="text-sm text-gray-500">Subiendo imagen...</p>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-8 h-8 mb-2 text-gray-400" />
+                        <p className="mb-2 text-sm text-gray-500">
+                          <span className="font-semibold">Haz clic para subir</span> una imagen
+                        </p>
+                        <p className="text-xs text-gray-500">PNG, JPG o JPEG (MAX. 5MB)</p>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploadingImage}
+                  />
+                </label>
+              </div>
+              
+              {/* URL Input Fields */}
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600 mb-2">O ingresa URLs manualmente:</p>
+                {formData.images.map((image, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    {image && (
+                      <img
+                        src={image}
+                        alt={`Preview ${index + 1}`}
+                        className="w-12 h-12 object-cover rounded border"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <input
+                      type="url"
+                      value={image}
+                      onChange={(e) => handleImageChange(index, e.target.value)}
+                      className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent ${
+                        image ? 'bg-green-50' : ''
+                      }`}
+                      placeholder="https://ejemplo.com/imagen.jpg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="text-red-600 hover:text-red-800 p-1"
+                      disabled={formData.images.length <= 1}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addImage}
+                  className="flex items-center space-x-2 text-[#002430] hover:text-yellow-600"
+                >
+                  <Plus size={18} />
+                  <span>Agregar imagen</span>
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                <strong>Importante:</strong> Debes tener al menos 1 imagen. Recomendamos 3+ imágenes de alta calidad. La primera será la imagen principal.
               </p>
             </div>
 
@@ -220,7 +526,7 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
                 disabled={loading}
                 className="px-6 py-2 bg-gradient-to-r from-yellow-400 to-yellow-600 text-[#002430] rounded-lg font-semibold hover:from-yellow-500 hover:to-yellow-700 transition-colors duration-200 disabled:opacity-50"
               >
-                {loading ? 'Guardando...' : (agent ? 'Actualizar' : 'Crear')}
+                {loading ? 'Guardando...' : (property ? 'Actualizar' : 'Crear')}
               </button>
             </div>
           </form>
@@ -230,4 +536,4 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
   );
 };
 
-export default AgentForm;
+export default PropertyForm;
