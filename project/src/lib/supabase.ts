@@ -52,6 +52,11 @@ export const supabase = createSupabaseClient();
 // Initialize Storage bucket if it doesn't exist
 export const initializeStorage = async () => {
   try {
+    if (!isSupabaseConfigured()) {
+      console.log('Supabase not configured, skipping storage initialization');
+      return;
+    }
+    
     // Check if bucket exists
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     
