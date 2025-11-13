@@ -1,19 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Filter } from 'lucide-react';
-import { properties as staticProperties } from '../data/properties';
 import { useProperties } from '../hooks/useProperties';
 import { Property } from '../types';
 import PropertyCard from './PropertyCard';
 import PropertyModal from './PropertyModal';
 
 const Properties: React.FC = () => {
-  const { properties: dbProperties, loading: dbLoading, error: dbError } = useProperties();
+  const { properties, loading, error } = useProperties();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'todas' | 'venta' | 'alquiler'>('todas');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-
-  // Use database properties if available, otherwise fallback to static
-  const properties = dbProperties.length > 0 ? dbProperties : staticProperties;
 
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
@@ -23,7 +19,7 @@ const Properties: React.FC = () => {
       
       return matchesSearch && matchesType;
     });
-  }, [searchTerm, selectedType]);
+  }, [properties, searchTerm, selectedType]);
 
   const handleViewDetails = (property: Property) => {
     setSelectedProperty(property);
@@ -88,15 +84,22 @@ const Properties: React.FC = () => {
         </div>
 
         {/* Properties Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProperties.map((property) => (
-            <PropertyCard
-              key={property.id}
-              property={property}
-              onViewDetails={handleViewDetails}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
+            <p className="mt-4 text-gray-600">Cargando propiedades...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredProperties.map((property) => (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                onViewDetails={handleViewDetails}
+              />
+            ))}
+          </div>
+        )}
 
         {filteredProperties.length === 0 && (
           <div className="text-center py-12">
