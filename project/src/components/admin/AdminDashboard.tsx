@@ -1,28 +1,23 @@
 import React, { useState } from 'react';
-import { 
-  Home, 
-  Users, 
-  Settings, 
-  LogOut, 
-  Plus, 
-  BarChart3,
-  Eye,
-  Edit,
-  Trash2,
-  FileText
-} from 'lucide-react';
+import { useEffect } from 'react';
+import { Home, Users, Settings, LogOut, Plus, BarChart3, Eye, CreditCard as Edit, Trash2, FileText } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { initializeStorage } from '../../lib/supabase';
 import { useProperties } from '../../hooks/useProperties';
-import { teamMembers } from '../../data/team';
-import { blogPosts } from '../../data/blog';
+import { useAgents } from '../../hooks/useAgents';
+import { useBlogPosts } from '../../hooks/useBlogPosts';
+import { useServices } from '../../hooks/useServices';
 import PropertyForm from './PropertyForm';
 import AgentForm from './AgentForm';
 import BlogPostForm from './BlogPostForm';
+import ServiceForm from './ServiceForm';
 
 const AdminDashboard: React.FC = () => {
   const { user, signOut } = useAuth();
-  const { properties, loading, refetch } = useProperties();
-  const agents = teamMembers; // Using team members as agents
+  const { properties, loading, refetch, createProperty, updateProperty, deleteProperty } = useProperties();
+  const { agents, loading: agentsLoading, createAgent, updateAgent, deleteAgent } = useAgents();
+  const { blogPosts, loading: blogLoading, createBlogPost, updateBlogPost, deleteBlogPost } = useBlogPosts();
+  const { services: allServices, loading: servicesLoading, createService, updateService, deleteService } = useServices();
   const [activeTab, setActiveTab] = useState('properties');
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
@@ -30,10 +25,17 @@ const AdminDashboard: React.FC = () => {
   const [editingAgent, setEditingAgent] = useState(null);
   const [showBlogForm, setShowBlogForm] = useState(false);
   const [editingBlogPost, setEditingBlogPost] = useState(null);
+  const [showServiceForm, setShowServiceForm] = useState(false);
+  const [editingService, setEditingService] = useState(null);
 
   const handleSignOut = async () => {
     await signOut();
   };
+  
+  // Initialize Supabase Storage on component mount
+  useEffect(() => {
+    initializeStorage();
+  }, []);
 
   const handleEditProperty = (property: any) => {
     setEditingProperty(property);
@@ -42,8 +44,12 @@ const AdminDashboard: React.FC = () => {
 
   const handleDeleteProperty = async (propertyId: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta propiedad?')) {
-      // TODO: Implement delete functionality
-      console.log('Delete property:', propertyId);
+      try {
+        await deleteProperty(propertyId);
+      } catch (error) {
+        console.error('Error deleting property:', error);
+        alert(`Error al eliminar la propiedad: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      }
     }
   };
   
@@ -54,8 +60,12 @@ const AdminDashboard: React.FC = () => {
 
   const handleDeleteAgent = async (agentId: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este agente?')) {
-      // TODO: Implement delete functionality
-      console.log('Delete agent:', agentId);
+      try {
+        await deleteAgent(agentId);
+      } catch (error) {
+        console.error('Error deleting agent:', error);
+        alert('Error al eliminar el agente');
+      }
     }
   };
   
@@ -66,8 +76,28 @@ const AdminDashboard: React.FC = () => {
 
   const handleDeleteBlogPost = async (postId: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este post?')) {
-      // TODO: Implement delete functionality
-      console.log('Delete blog post:', postId);
+      try {
+        await deleteBlogPost(postId);
+      } catch (error) {
+        console.error('Error deleting blog post:', error);
+        alert('Error al eliminar el post');
+      }
+    }
+  };
+  
+  const handleEditService = (service: any) => {
+    setEditingService(service);
+    setShowServiceForm(true);
+  };
+
+  const handleDeleteService = async (serviceId: string) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este servicio?')) {
+      try {
+        await deleteService(serviceId);
+      } catch (error) {
+        console.error('Error deleting service:', error);
+        alert('Error al eliminar el servicio');
+      }
     }
   };
   
@@ -82,14 +112,24 @@ const AdminDashboard: React.FC = () => {
     return (
       <PropertyForm
         property={editingProperty}
+        agents={agents}
         onClose={() => {
           setShowPropertyForm(false);
           setEditingProperty(null);
         }}
-        onSave={() => {
+        onSave={async (propertyData, isEdit) => {
+          try {
+            if (isEdit && editingProperty) {
+              await updateProperty(editingProperty.id, propertyData);
+            } else {
+              await createProperty(propertyData);
+            }
+          } catch (error) {
+            console.error('Error saving property:', error);
+            throw error;
+          }
           setShowPropertyForm(false);
           setEditingProperty(null);
-          refetch();
         }}
       />
     );
@@ -202,6 +242,16 @@ const AdminDashboard: React.FC = () => {
                 }`}
               >
                 Blog
+              </button>
+              <button
+                onClick={() => setActiveTab('services')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'services'
+                    ? 'border-yellow-500 text-yellow-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Servicios
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
@@ -404,7 +454,13 @@ const AdminDashboard: React.FC = () => {
                 </button>
               </div>
 
-              <div className="overflow-x-auto">
+              {blogLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Cargando posts...</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -486,6 +542,75 @@ const AdminDashboard: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              )}
+            </div>
+          )}
+
+          {/* Services Tab */}
+          {activeTab === 'services' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Gestión de Servicios</h2>
+                <button
+                  onClick={() => setShowServiceForm(true)}
+                  className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-[#002430] px-4 py-2 rounded-lg font-semibold hover:from-yellow-500 hover:to-yellow-700 transition-colors duration-200 flex items-center space-x-2"
+                >
+                  <Plus size={18} />
+                  <span>Nuevo Servicio</span>
+                </button>
+              </div>
+
+              {servicesLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Cargando servicios...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {allServices.map((service) => (
+                    <div key={service.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow duration-200">
+                      <div className="flex items-center space-x-4 mb-4">
+                        <div className="bg-[#002430] w-12 h-12 rounded-lg flex items-center justify-center">
+                          <span className="text-yellow-400 text-xl">
+                            {service.icon === 'Calculator' ? '🧮' :
+                             service.icon === 'FileText' ? '📄' :
+                             service.icon === 'Palmtree' ? '🌴' :
+                             service.icon === 'Shield' ? '🛡️' :
+                             service.icon === 'Blueprint' ? '📐' :
+                             service.icon === 'MapPin' ? '📍' :
+                             service.icon === 'DollarSign' ? '💰' :
+                             service.icon === 'Settings' ? '⚙️' :
+                             service.icon === 'Drafting' ? '✏️' :
+                             service.icon === 'CreditCard' ? '💳' : '⚙️'}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 text-sm">{service.title}</h3>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                        {service.description}
+                      </p>
+                      
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => handleEditService(service)}
+                          className="flex-1 bg-blue-500 text-white py-2 px-3 rounded text-sm hover:bg-blue-600 transition-colors duration-200"
+                        >
+                          Editar
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteService(service.id)}
+                          className="flex-1 bg-red-500 text-white py-2 px-3 rounded text-sm hover:bg-red-600 transition-colors duration-200"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -707,6 +832,20 @@ const AdminDashboard: React.FC = () => {
             setShowAgentForm(false);
             setEditingAgent(null);
             // TODO: Refresh agents
+          }}
+        />
+      )}
+      
+      {showServiceForm && (
+        <ServiceForm
+          service={editingService}
+          onClose={() => {
+            setShowServiceForm(false);
+            setEditingService(null);
+          }}
+          onSave={() => {
+            setShowServiceForm(false);
+            setEditingService(null);
           }}
         />
       )}
