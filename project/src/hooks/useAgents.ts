@@ -7,6 +7,48 @@ export const useAgents = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  const initializeAgentsData = useCallback(async () => {
+    if (!isSupabaseConfigured()) return false;
+    
+    try {
+      console.log('🔄 Initializing agents data in Supabase...');
+      
+      // Insertar agentes estáticos si no existen
+      const { data: insertedAgents, error: insertError } = await supabase
+        .from('agents')
+        .upsert(
+          teamMembers.map(agent => ({
+            id: agent.id,
+            name: agent.name,
+            role: agent.role,
+            phone: agent.phone,
+            email: agent.email,
+            photo: agent.photo,
+            experience: agent.experience,
+            description: agent.description || 'Profesional especializado en servicios inmobiliarios',
+            is_active: true
+          })),
+          { 
+            onConflict: 'id',
+            ignoreDuplicates: false // Actualizar si ya existe
+          }
+        )
+        .select();
+
+      if (insertError) {
+        console.warn('Could not initialize agents data:', insertError);
+        return false;
+      }
+
+      console.log('✅ Agents data initialized successfully:', insertedAgents?.length);
+      return true;
+    } catch (err) {
+      console.warn('Error initializing agents data:', err);
+      return false;
+    }
+  }, []);
 
   const fetchAgents = useCallback(async () => {
     try {
@@ -16,34 +58,77 @@ export const useAgents = () => {
       if (!isSupabaseConfigured()) {
         console.log('Supabase not configured, using static data');
         setAgents(teamMembers);
+        setInitialized(true);
         return;
       }
 
+      // Intentar obtener datos de Supabase
       const { data, error: fetchError } = await supabase
         .from('agents')
         .select('*')
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (fetchError) {
-        if (fetchError.code === 'PGRST116' || fetchError.message?.includes('table')) {
+        // Si la tabla no existe o hay error de esquema
+        if (fetchError.code === 'PGRST116' || 
+            fetchError.message?.includes('table') ||
+            fetchError.message?.includes('schema')) {
           console.warn('Agents table not found, using static data');
           setAgents(teamMembers);
+          setInitialized(true);
           return;
         }
-        throw fetchError;
+        
+        // Si es error de JWT, usar datos estáticos
+        if (fetchError.code === 'PGRST303') {
+          console.log('JWT expired, using static data (normal for public pages)');
+          setAgents(teamMembers);
+          setInitialized(true);
+          return;
+        }
+        
+        console.warn('Error fetching agents:', fetchError);
       }
 
-      setAgents(data || []);
+      // Si no hay datos, inicializar con datos estáticos
+      if (!data || data.length === 0) {
+        console.log('No agents found in database, initializing...');
+        const initSuccess = await initializeAgentsData();
+        
+        if (initSuccess) {
+          // Volver a intentar obtener los datos
+          const { data: newData } = await supabase
+            .from('agents')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          if (newData && newData.length > 0) {
+            setAgents(newData.filter(agent => agent.is_active !== false));
+            setInitialized(true);
+            return;
+          }
+        }
+        
+        // Si falla la inicialización, usar datos estáticos
+        setAgents(teamMembers);
+        setInitialized(true);
+        return;
+      }
+
+      // Filtrar solo agentes activos
+      const activeAgents = data.filter(agent => agent.is_active !== false);
+      setAgents(activeAgents);
+      setInitialized(true);
+      
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       console.warn('Error fetching agents, falling back to static data:', err);
       setAgents(teamMembers);
-      setError(errorMessage);
+      setInitialized(true);
+      setError(null); // No mostrar error, es normal usar fallback
     } finally {
       setLoading(false);
     }
-  }, []); // Sin dependencias ya que no usa props ni state
+  }, [initializeAgentsData]);
 
   const createAgent = useCallback(async (agentData: Omit<Agent, 'id'>) => {
     if (!isSupabaseConfigured()) {
@@ -128,6 +213,7 @@ export const useAgents = () => {
     agents,
     loading,
     error,
+    initialized,
     refetch: fetchAgents,
     createAgent,
     updateAgent,
