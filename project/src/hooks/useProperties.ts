@@ -3,7 +3,7 @@ import { supabase, DatabaseProperty, DatabaseAgent, isSupabaseConfigured } from 
 import { Property } from '../types';
 import { properties as staticProperties } from '../data/properties';
 
-export const useProperties = () => {
+export const useProperties = (shouldRefetch = false) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,101 +85,85 @@ export const useProperties = () => {
 
   useEffect(() => {
     fetchProperties();
-  }, []);
+  }, [shouldRefetch]);
 
   return {
     properties,
     loading,
     error,
     refetch: fetchProperties,
+    createProperty: async (propertyData: Omit<Property, 'id'>) => {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase no está configurado');
+      }
+
+      const { data, error } = await supabase
+        .from('properties')
+        .insert([{
+          title: propertyData.title,
+          price: propertyData.price,
+          currency: propertyData.currency,
+          type: propertyData.type,
+          location: propertyData.location,
+          bedrooms: propertyData.bedrooms,
+          bathrooms: propertyData.bathrooms,
+          area: propertyData.area,
+          parking: propertyData.parking,
+          images: propertyData.images,
+          description: propertyData.description,
+          features: propertyData.features,
+          agent_id: propertyData.agent.id,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      await fetchProperties();
+      return data;
+    },
+    updateProperty: async (id: string, propertyData: Partial<Property>) => {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase no está configurado');
+      }
+
+      const updateData: any = {};
+      if (propertyData.title) updateData.title = propertyData.title;
+      if (propertyData.price) updateData.price = propertyData.price;
+      if (propertyData.currency) updateData.currency = propertyData.currency;
+      if (propertyData.type) updateData.type = propertyData.type;
+      if (propertyData.location) updateData.location = propertyData.location;
+      if (propertyData.bedrooms !== undefined) updateData.bedrooms = propertyData.bedrooms;
+      if (propertyData.bathrooms !== undefined) updateData.bathrooms = propertyData.bathrooms;
+      if (propertyData.area !== undefined) updateData.area = propertyData.area;
+      if (propertyData.parking !== undefined) updateData.parking = propertyData.parking;
+      if (propertyData.images) updateData.images = propertyData.images;
+      if (propertyData.description) updateData.description = propertyData.description;
+      if (propertyData.features) updateData.features = propertyData.features;
+      if (propertyData.agent?.id) updateData.agent_id = propertyData.agent.id;
+
+      const { data, error } = await supabase
+        .from('properties')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      await fetchProperties();
+      return data;
+    },
+    deleteProperty: async (id: string) => {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase no está configurado');
+      }
+
+      const { error } = await supabase
+        .from('properties')
+        .update({ is_active: false })
+        .eq('id', id);
+
+      if (error) throw error;
+      await fetchProperties();
+    }
   };
-};
-
-// Export CRUD functions separately
-export const createProperty = async (propertyData: Omit<Property, 'id'>) => {
-  try {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado');
-    }
-
-    const { data, error } = await supabase
-      .from('properties')
-      .insert([{
-        title: propertyData.title,
-        price: propertyData.price,
-        currency: propertyData.currency,
-        type: propertyData.type,
-        location: propertyData.location,
-        bedrooms: propertyData.bedrooms,
-        bathrooms: propertyData.bathrooms,
-        area: propertyData.area,
-        parking: propertyData.parking,
-        images: propertyData.images,
-        description: propertyData.description,
-        features: propertyData.features,
-        agent_id: propertyData.agent.id,
-      }])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (err) {
-    console.error('Error creating property:', err);
-    throw err;
-  }
-};
-
-export const updateProperty = async (id: string, propertyData: Partial<Property>) => {
-  try {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado');
-    }
-
-    const updateData: any = {};
-    if (propertyData.title) updateData.title = propertyData.title;
-    if (propertyData.price) updateData.price = propertyData.price;
-    if (propertyData.currency) updateData.currency = propertyData.currency;
-    if (propertyData.type) updateData.type = propertyData.type;
-    if (propertyData.location) updateData.location = propertyData.location;
-    if (propertyData.bedrooms !== undefined) updateData.bedrooms = propertyData.bedrooms;
-    if (propertyData.bathrooms !== undefined) updateData.bathrooms = propertyData.bathrooms;
-    if (propertyData.area !== undefined) updateData.area = propertyData.area;
-    if (propertyData.parking !== undefined) updateData.parking = propertyData.parking;
-    if (propertyData.images) updateData.images = propertyData.images;
-    if (propertyData.description) updateData.description = propertyData.description;
-    if (propertyData.features) updateData.features = propertyData.features;
-    if (propertyData.agent?.id) updateData.agent_id = propertyData.agent.id;
-
-    const { data, error } = await supabase
-      .from('properties')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (err) {
-    console.error('Error updating property:', err);
-    throw err;
-  }
-};
-
-export const deleteProperty = async (id: string) => {
-  try {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase no está configurado');
-    }
-
-    const { error } = await supabase
-      .from('properties')
-      .update({ is_active: false })
-      .eq('id', id);
-
-    if (error) throw error;
-  } catch (err) {
-    console.error('Error deleting property:', err);
-    throw err;
-  }
 };
