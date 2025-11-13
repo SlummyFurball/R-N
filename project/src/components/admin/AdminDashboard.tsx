@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useEffect } from 'react';
 import { Home, Users, Settings, LogOut, Plus, BarChart3, Eye, CreditCard as Edit, Trash2, FileText } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { initializeStorage } from '../../lib/supabase';
+import { initializeStorage, isSupabaseConfigured } from '../../lib/supabase';
 import { useProperties } from '../../hooks/useProperties';
 import { useAgents } from '../../hooks/useAgents';
 import { useBlogPosts } from '../../hooks/useBlogPosts';
