@@ -27,7 +27,7 @@ const values = [
 ];
 
 const Team: React.FC = () => {
-  const { agents, loading, error } = useAgents();
+  const { agents, loading, error, initialized } = useAgents();
 
   const handleWhatsAppClick = (phone: string, name: string) => {
     const message = `Hola ${name}, me interesa obtener más información sobre sus servicios inmobiliarios`;
@@ -60,11 +60,13 @@ const Team: React.FC = () => {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Cargando equipo...</p>
+            <p className="mt-4 text-gray-600">
+              {initialized ? 'Cargando equipo...' : 'Inicializando datos...'}
+            </p>
           </div>
         ) : error ? (
           <div className="text-center py-12">
-            <p className="text-red-600">Error al cargar el equipo. Mostrando datos de respaldo.</p>
+            <p className="text-yellow-600">Usando datos locales (normal si no hay conexión a BD)</p>
           </div>
         ) : null}
 
