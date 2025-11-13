@@ -28,13 +28,15 @@ const AdminLogin: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
+    console.log('Attempting login with:', { email, supabaseConfigured: isSupabaseConfigured() });
 
     try {
       const { error } = await signIn(email, password);
       
       if (error) {
         console.error('Sign in error details:', error);
-        setError(`Error: ${error.message}\nCode: ${error.status || 'Unknown'}`);
+        setError(`Error: ${error.message}\nCode: ${error.status || 'Unknown'}\nDetails: ${JSON.stringify(error, null, 2)}`);
       }
     } catch (err) {
       console.error('Network or connection error:', err);
