@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, FileText, Calendar, Clock, Tag } from 'lucide-react';
+import { useBlogPosts } from '../../hooks/useBlogPosts';
 import { BlogPost } from '../../types';
 
 interface BlogPostFormProps {
@@ -11,6 +12,7 @@ interface BlogPostFormProps {
 const categories = ['Mercado', 'Consejos', 'Inversión'];
 
 const BlogPostForm: React.FC<BlogPostFormProps> = ({ post, onClose, onSave }) => {
+  const { createBlogPost, updateBlogPost } = useBlogPosts();
   const [formData, setFormData] = useState({
     title: '',
     excerpt: '',
@@ -48,15 +50,16 @@ const BlogPostForm: React.FC<BlogPostFormProps> = ({ post, onClose, onSave }) =>
     setLoading(true);
 
     try {
-      // TODO: Implement actual save to Supabase
-      console.log('Saving blog post:', formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (post) {
+        await updateBlogPost(post.id, formData);
+      } else {
+        await createBlogPost(formData);
+      }
       
       onSave();
     } catch (error) {
       console.error('Error saving blog post:', error);
+      alert(`Error al ${post ? 'actualizar' : 'crear'} el post: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
@@ -172,7 +175,7 @@ const BlogPostForm: React.FC<BlogPostFormProps> = ({ post, onClose, onSave }) =>
                 />
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                Recomendamos usar imágenes de Pexels con dimensiones 800x600px
+                Recomendamos usar imágenes de Pexels con dimensiones 800x600px. Ejemplo: https://images.pexels.com/photos/...
               </p>
             </div>
 
