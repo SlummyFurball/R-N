@@ -60,7 +60,7 @@ const Team: React.FC = () => {
             <div key={member.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
               <div className="aspect-w-3 aspect-h-4">
                 <img
-                  src={member.image}
+                  src={member.photo}
                   alt={member.name}
                   className="w-full h-64 object-cover"
                 />
