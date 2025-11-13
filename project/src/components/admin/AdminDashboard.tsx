@@ -119,15 +119,16 @@ const AdminDashboard: React.FC = () => {
         }}
         onSave={async (propertyData, isEdit) => {
           try {
+            console.log('Dashboard onSave called with:', { propertyData, isEdit });
             if (isEdit && editingProperty) {
-              await updateProperty(editingProperty.id, propertyData);
+              const result = await updateProperty(editingProperty.id, propertyData);
               console.log('Property updated successfully');
             } else {
-              await createProperty(propertyData);
+              const result = await createProperty(propertyData);
               console.log('Property created successfully');
             }
-            // Refresh the properties list
             await refetch();
+            console.log('Properties refreshed');
           } catch (error) {
             console.error('Error saving property:', error);
             throw error;
