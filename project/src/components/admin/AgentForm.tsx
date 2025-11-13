@@ -30,7 +30,8 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
         phone: agent.phone,
         email: agent.email,
         photo: agent.photo,
-        experience: agent.experience
+        experience: agent.experience,
+        description: agent.description || ''
       });
     }
   }, [agent]);
@@ -185,6 +186,24 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 placeholder="Ej: 15+ años"
               />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Descripción
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
+                placeholder="Descripción profesional del agente, especialidades, logros, etc."
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Opcional: Describe la experiencia y especialidades del agente
+              </p>
             </div>
 
             {/* Photo URL */}
