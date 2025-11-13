@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { X, Upload, Trash2, Plus, Image as ImageIcon } from 'lucide-react';
 import { Property, Agent } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { useAgents } from '../../hooks/useAgents';
 
 interface PropertyFormProps {
   property?: Property | null;
-  agents: Agent[];
   onClose: () => void;
   onSave: (propertyData: any, isEdit: boolean) => Promise<void>;
 }
 
-const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, onSave }) => {
+const PropertyForm: React.FC<PropertyFormProps> = ({ property, onClose, onSave }) => {
+  const { agents, loading: agentsLoading } = useAgents();
   const [formData, setFormData] = useState({
     title: '',
     price: 0,
@@ -24,12 +25,18 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, 
     description: '',
     features: [''],
     images: [''],
-    agent_id: '1', // Default agent
+    agent_id: '', // Will be set when agents load
   });
 
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
+  // Set default agent when agents load
+  useEffect(() => {
+    if (agents.length > 0 && !formData.agent_id && !property) {
+      setFormData(prev => ({ ...prev, agent_id: agents[0].id }));
+    }
+  }, [agents, formData.agent_id, property]);
   useEffect(() => {
     if (property) {
       setFormData({
@@ -164,6 +171,10 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, 
         throw new Error('Por favor completa todos los campos requeridos');
       }
 
+      if (!cleanedData.agent_id) {
+        throw new Error('Por favor selecciona un agente');
+      }
+
       if (cleanedData.images.length === 0) {
         throw new Error('Debes agregar al menos una imagen');
       }
@@ -171,7 +182,7 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, 
       // Find the selected agent
       const selectedAgent = agents.find(agent => agent.id === cleanedData.agent_id);
       if (!selectedAgent) {
-        throw new Error('Agente seleccionado no encontrado');
+        throw new Error(`Agente seleccionado no encontrado. ID: ${cleanedData.agent_id}. Agentes disponibles: ${agents.map(a => `${a.name}(${a.id})`).join(', ')}`);
       }
 
       const propertyData = {
@@ -289,18 +300,26 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, agents, onClose, 
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Agente Asignado *
                 </label>
+                {agentsLoading ? (
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                    <span className="text-gray-500">Cargando agentes...</span>
+                  </div>
+                ) : (
                 <select
                   name="agent_id"
                   value={formData.agent_id}
                   onChange={handleInputChange}
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 >
+                  <option value="">Selecciona un agente</option>
                   {agents.map((agent) => (
                     <option key={agent.id} value={agent.id}>
                       {agent.name} - {agent.role}
                     </option>
                   ))}
                 </select>
+                )}
               </div>
             </div>
 
