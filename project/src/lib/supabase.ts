@@ -5,6 +5,12 @@ function createSupabaseClient(): SupabaseClient {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+  console.log('🔧 Creating Supabase client:', {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseAnonKey,
+    urlPreview: supabaseUrl?.substring(0, 30) + '...'
+  });
+
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('Supabase environment variables not configured. Using fallback.');
     
@@ -26,11 +32,46 @@ function createSupabaseClient(): SupabaseClient {
     );
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'x-client-info': 'rnparadisse-web'
+      }
+    }
+  });
 }
 
 // Exportar cliente único
 export const supabase = createSupabaseClient();
+
+// Initialize Storage bucket if it doesn't exist
+export const initializeStorage = async () => {
+  try {
+    // Check if bucket exists
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.warn('Could not list buckets:', listError);
+      return;
+    }
+    
+    const propertyImagesBucket = buckets?.find(bucket => bucket.name === 'property-images');
+    
+    if (!propertyImagesBucket) {
+      console.warn('Property images bucket not found. Please create it manually in Supabase Dashboard:');
+      console.warn('1. Go to Storage section in Supabase Dashboard');
+      console.warn('2. Create a new bucket named "property-images"');
+      console.warn('3. Make it public and allow image file types');
+    }
+  } catch (error) {
+    console.warn('Storage initialization error:', error);
+  }
+};
 
 // Helper para verificar si Supabase está configurado
 export const isSupabaseConfigured = (): boolean => {
