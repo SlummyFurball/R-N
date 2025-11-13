@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, Search, Filter, ChevronRight, Mail } from 'lucide-react';
-import { blogPosts } from '../data/blog';
+import { useBlogPosts } from '../hooks/useBlogPosts';
 import { BlogPost } from '../types';
 import { formatDate } from '../utils/formatters';
 
 const categories = ['Todos', 'Mercado', 'Consejos', 'Inversión'];
 
 const Blog: React.FC = () => {
+  const { blogPosts, loading } = useBlogPosts();
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [email, setEmail] = useState('');
@@ -139,47 +140,54 @@ const Blog: React.FC = () => {
             </div>
 
             {/* Regular Posts */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {regularPosts.map((post) => (
-                <article key={post.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  
-                  <div className="p-6">
-                    <div className="flex items-center space-x-4 mb-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        post.category === 'Mercado' ? 'bg-blue-100 text-blue-800' :
-                        post.category === 'Consejos' ? 'bg-green-100 text-green-800' :
-                        'bg-purple-100 text-purple-800'
-                      }`}>
-                        {post.category}
-                      </span>
-                      <span className="text-gray-500 text-xs">{formatDate(post.date)}</span>
-                      <span className="text-gray-500 text-xs">{post.readTime}</span>
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
+                <p className="mt-4 text-gray-600">Cargando artículos...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {regularPosts.map((post) => (
+                  <article key={post.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                    <img
+                      src={post.image}
+                      alt={post.title}
+                      className="w-full h-48 object-cover"
+                    />
+                    
+                    <div className="p-6">
+                      <div className="flex items-center space-x-4 mb-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          post.category === 'Mercado' ? 'bg-blue-100 text-blue-800' :
+                          post.category === 'Consejos' ? 'bg-green-100 text-green-800' :
+                          'bg-purple-100 text-purple-800'
+                        }`}>
+                          {post.category}
+                        </span>
+                        <span className="text-gray-500 text-xs">{formatDate(post.date)}</span>
+                        <span className="text-gray-500 text-xs">{post.readTime}</span>
+                      </div>
+                      
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2">
+                        {post.title}
+                      </h3>
+                      
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                        {post.excerpt}
+                      </p>
+                      
+                      <button
+                        onClick={() => handleReadMore(post)}
+                        className="text-[#002430] hover:text-yellow-600 font-medium text-sm flex items-center space-x-1"
+                      >
+                        <span>Leer más</span>
+                        <ChevronRight size={14} />
+                      </button>
                     </div>
-                    
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2">
-                      {post.title}
-                    </h3>
-                    
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                      {post.excerpt}
-                    </p>
-                    
-                    <button
-                      onClick={() => handleReadMore(post)}
-                      className="text-[#002430] hover:text-yellow-600 font-medium text-sm flex items-center space-x-1"
-                    >
-                      <span>Leer más</span>
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+            )}
 
             {filteredPosts.length === 0 && (
               <div className="text-center py-12">
