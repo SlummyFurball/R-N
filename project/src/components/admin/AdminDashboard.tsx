@@ -156,7 +156,6 @@ const AdminDashboard: React.FC = () => {
     return (
       <PropertyForm
         property={editingProperty}
-        agents={agents}
         onClose={() => {
           setShowPropertyForm(false);
           setEditingProperty(null);
