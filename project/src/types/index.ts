@@ -23,6 +23,7 @@ export interface Agent {
   email: string;
   photo: string;
   experience: string;
+  description?: string; // Campo opcional agregado
 }
 
 export interface Service {
@@ -52,13 +53,4 @@ export interface Testimonial {
   image: string;
 }
 
-export interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  description: string;
-  image: string;
-  phone: string;
-  email: string;
-  experience: string;
-}
+// ❌ TeamMember eliminado - usa Agent en su lugar
