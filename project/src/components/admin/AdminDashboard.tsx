@@ -654,7 +654,7 @@ const AdminDashboard: React.FC = () => {
             setShowAgentForm(false);
             setEditingAgent(null);
           }}
-          onSave={handleAgentSave} {/* ✅ CORREGIDO */}
+          onSave={handleAgentSave}
         />
       )}
       
@@ -665,7 +665,7 @@ const AdminDashboard: React.FC = () => {
             setShowServiceForm(false);
             setEditingService(null);
           }}
-          onSave={handleServiceSave} {/* ✅ CORREGIDO */}
+          onSave={handleServiceSave}
         />
       )}
       
@@ -676,7 +676,7 @@ const AdminDashboard: React.FC = () => {
             setShowBlogForm(false);
             setEditingBlogPost(null);
           }}
-          onSave={handleBlogSave} {/* ✅ CORREGIDO */}
+          onSave={handleBlogSave}
         />
       )}
     </div>
