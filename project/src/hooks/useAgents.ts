@@ -112,7 +112,17 @@ export const useAgents = () => {
 
   useEffect(() => {
     fetchAgents();
-  }, [fetchAgents]); // Ahora incluye la dependencia
+  }, []); // Ejecutar solo una vez al montar el componente
+
+  // Refetch cuando la página se enfoca (usuario regresa de otra pestaña)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchAgents();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   return {
     agents,
