@@ -113,6 +113,8 @@ const AdminDashboard: React.FC = () => {
       }
       await refetch();
       console.log('Properties refreshed');
+      setShowPropertyForm(false);
+      setEditingProperty(null);
     } catch (error) {
       console.error('Error saving property:', error);
       throw error;
