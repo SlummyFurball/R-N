@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Home, Users, Settings, LogOut, Plus, BarChart3, Eye, CreditCard as Edit, Trash2 } from 'lucide-react';
+import { Home, Users, Settings, FileText, LogOut, Plus, BarChart3, Eye, CreditCard as Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { initializeStorage } from '../../lib/supabase';
 import { useProperties } from '../../hooks/useProperties';
