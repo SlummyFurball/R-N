@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 import { createWhatsAppUrl } from '../utils/formatters';
+import { useConfiguration } from '../hooks/useConfiguration';
 
 const WhatsAppWidget: React.FC = () => {
+  const { getConfigValue } = useConfiguration();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleWhatsAppClick = () => {
     const message = 'Hola, me interesa obtener más información sobre sus servicios inmobiliarios';
-    const whatsappUrl = createWhatsAppUrl('+1-809-798-5428', message);
+    const whatsappNumber = getConfigValue('whatsapp_number', '+18097985428');
+    const whatsappUrl = createWhatsAppUrl(whatsappNumber, message);
     window.open(whatsappUrl, '_blank');
   };
 
