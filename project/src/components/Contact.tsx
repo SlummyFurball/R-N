@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
+import { useConfiguration } from '../hooks/useConfiguration';
 
 const Contact: React.FC = () => {
+  const { getConfigValue } = useConfiguration();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -56,25 +58,25 @@ const Contact: React.FC = () => {
                   <Phone className="text-yellow-400 mt-1" size={20} />
                   <div>
                     <h4 className="font-semibold mb-1">Teléfono</h4>
-                    <p className="text-gray-300">(809) 798-5428</p>
+                    <p className="text-gray-300">{getConfigValue('contact_phone', '(809) 798-5428')}</p>
                     <p className="text-sm text-gray-400">Llamadas y WhatsApp</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-4">
                   <Mail className="text-yellow-400 mt-1" size={20} />
                   <div>
                     <h4 className="font-semibold mb-1">Email</h4>
-                    <p className="text-gray-300">info@rnparadisse.com</p>
+                    <p className="text-gray-300">{getConfigValue('contact_email', 'info@rnparadisse.com')}</p>
                     <p className="text-sm text-gray-400">Respuesta en 24 horas</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-4">
                   <MapPin className="text-yellow-400 mt-1" size={20} />
                   <div>
                     <h4 className="font-semibold mb-1">Ubicación</h4>
-                    <p className="text-gray-300">Santo Domingo Este</p>
+                    <p className="text-gray-300">{getConfigValue('address', 'Santo Domingo, República Dominicana')}</p>
                     <p className="text-sm text-gray-400">República Dominicana</p>
                   </div>
                 </div>
