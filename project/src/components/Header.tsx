@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Menu, X, Phone } from 'lucide-react';
 import { scrollToElement, createWhatsAppUrl } from '../utils/formatters';
 import { useScrollspy } from '../hooks/useScrollspy';
+import { useConfiguration } from '../hooks/useConfiguration';
 
 const navigation = [
   { name: 'Inicio', href: 'hero' },
@@ -13,6 +14,7 @@ const navigation = [
 ];
 
 const Header: React.FC = () => {
+  const { getConfigValue } = useConfiguration();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const activeSection = useScrollspy(navigation.map(item => item.href));
 
@@ -22,7 +24,8 @@ const Header: React.FC = () => {
   };
 
   const handleConsultaClick = () => {
-    const whatsappUrl = createWhatsAppUrl('+1-809-798-5428', 'Hola, me interesa obtener más información sobre sus servicios inmobiliarios');
+    const whatsappNumber = getConfigValue('whatsapp_number', '+18097985428');
+    const whatsappUrl = createWhatsAppUrl(whatsappNumber, 'Hola, me interesa obtener más información sobre sus servicios inmobiliarios');
     window.open(whatsappUrl, '_blank');
   };
 
