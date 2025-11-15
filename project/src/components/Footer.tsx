@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Phone, Mail, MapPin, Facebook, Instagram, Linkedin, Twitter, FileText, Shield, Cookie } from 'lucide-react';
 import { scrollToElement, createWhatsAppUrl } from '../utils/formatters';
+import { useConfiguration } from '../hooks/useConfiguration';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
 
 const Footer: React.FC = () => {
+  const { getConfigValue } = useConfiguration();
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const handleNavigation = (sectionId: string) => {
@@ -11,7 +13,8 @@ const Footer: React.FC = () => {
   };
 
   const handleWhatsAppClick = () => {
-    const whatsappUrl = createWhatsAppUrl('+1-809-798-5428', 'Hola, me interesa obtener más información sobre sus servicios inmobiliarios');
+    const whatsappNumber = getConfigValue('whatsapp_number', '+18097985428');
+    const whatsappUrl = createWhatsAppUrl(whatsappNumber, 'Hola, me interesa obtener más información sobre sus servicios inmobiliarios');
     window.open(whatsappUrl, '_blank');
   };
 
@@ -38,18 +41,46 @@ const Footer: React.FC = () => {
               </p>
 
               <div className="flex space-x-3">
-                <a href="#" className="text-gray-300 hover:text-yellow-400 transition-colors duration-200">
-                  <Facebook size={20} />
-                </a>
-                <a href="#" className="text-gray-300 hover:text-yellow-400 transition-colors duration-200">
-                  <Instagram size={20} />
-                </a>
-                <a href="#" className="text-gray-300 hover:text-yellow-400 transition-colors duration-200">
-                  <Linkedin size={20} />
-                </a>
-                <a href="#" className="text-gray-300 hover:text-yellow-400 transition-colors duration-200">
-                  <Twitter size={20} />
-                </a>
+                {getConfigValue('facebook_url') && (
+                  <a
+                    href={getConfigValue('facebook_url')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-300 hover:text-yellow-400 transition-colors duration-200"
+                  >
+                    <Facebook size={20} />
+                  </a>
+                )}
+                {getConfigValue('instagram_url') && (
+                  <a
+                    href={getConfigValue('instagram_url')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-300 hover:text-yellow-400 transition-colors duration-200"
+                  >
+                    <Instagram size={20} />
+                  </a>
+                )}
+                {getConfigValue('linkedin_url') && (
+                  <a
+                    href={getConfigValue('linkedin_url')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-300 hover:text-yellow-400 transition-colors duration-200"
+                  >
+                    <Linkedin size={20} />
+                  </a>
+                )}
+                {getConfigValue('twitter_url') && (
+                  <a
+                    href={getConfigValue('twitter_url')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-300 hover:text-yellow-400 transition-colors duration-200"
+                  >
+                    <Twitter size={20} />
+                  </a>
+                )}
               </div>
             </div>
 
@@ -136,7 +167,7 @@ const Footer: React.FC = () => {
                 <div className="flex items-start space-x-3">
                   <Phone className="text-yellow-400 mt-0.5" size={16} />
                   <div>
-                    <p className="text-gray-300">(809) 798-5428</p>
+                    <p className="text-gray-300">{getConfigValue('contact_phone', '(809) 798-5428')}</p>
                     <p className="text-gray-400 text-xs">WhatsApp disponible</p>
                   </div>
                 </div>
@@ -144,7 +175,7 @@ const Footer: React.FC = () => {
                 <div className="flex items-start space-x-3">
                   <Mail className="text-yellow-400 mt-0.5" size={16} />
                   <div>
-                    <p className="text-gray-300">info@rnparadisse.com</p>
+                    <p className="text-gray-300">{getConfigValue('contact_email', 'info@rnparadisse.com')}</p>
                     <p className="text-gray-400 text-xs">Respuesta en 24h</p>
                   </div>
                 </div>
@@ -152,7 +183,7 @@ const Footer: React.FC = () => {
                 <div className="flex items-start space-x-3">
                   <MapPin className="text-yellow-400 mt-0.5" size={16} />
                   <div>
-                    <p className="text-gray-300">Santo Domingo Este</p>
+                    <p className="text-gray-300">{getConfigValue('address', 'Santo Domingo, República Dominicana')}</p>
                     <p className="text-gray-400 text-xs">República Dominicana</p>
                   </div>
                 </div>
@@ -164,7 +195,7 @@ const Footer: React.FC = () => {
           <div className="border-t border-gray-600 mt-12 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="text-gray-400 text-sm mb-4 md:mb-0">
-                © {currentYear} R&N Paradisse Real Estate. Todos los derechos reservados.
+                © {currentYear} {getConfigValue('site_name', 'R&N Paradisse Real Estate')}. Todos los derechos reservados.
               </div>
               
               <div className="flex flex-wrap items-center space-x-6 text-sm">
