@@ -1,16 +1,16 @@
 import React from 'react';
-import { services } from '../data/services';
-import { 
-  Calculator, 
-  FileText, 
-  Palmtree, 
-  Shield, 
-  Building, 
-  MapPin, 
-  DollarSign, 
-  Settings, 
-  PenTool, 
-  CreditCard 
+import { useServices } from '../hooks/useServices';
+import {
+  Calculator,
+  FileText,
+  Palmtree,
+  Shield,
+  Building,
+  MapPin,
+  DollarSign,
+  Settings,
+  PenTool,
+  CreditCard
 } from 'lucide-react';
 import { createWhatsAppUrl } from '../utils/formatters';
 
@@ -28,6 +28,20 @@ const iconMap = {
 };
 
 const Services: React.FC = () => {
+  const { services, loading } = useServices();
+
+  if (loading) {
+    return (
+      <section className="py-20 bg-[#f4f4f2]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#002430]"></div>
+            <span className="ml-2 text-gray-600">Cargando servicios...</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
   const handleServiceClick = (serviceName: string) => {
     const message = `Hola, me interesa obtener más información sobre el servicio de ${serviceName}`;
     const whatsappUrl = createWhatsAppUrl('+1-809-798-5428', message);
