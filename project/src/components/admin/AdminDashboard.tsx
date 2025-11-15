@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Home, Users, Settings, FileText, LogOut, Plus, BarChart3, Eye, CreditCard as Edit, Trash2 } from 'lucide-react';
+import { Home, Users, Settings, FileText, LogOut, Plus, BarChart3, Eye, CreditCard as Edit, Trash2, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { initializeStorage } from '../../lib/supabase';
 import { useProperties } from '../../hooks/useProperties';
 import { useAgents } from '../../hooks/useAgents';
 import { useBlogPosts } from '../../hooks/useBlogPosts';
 import { useServices } from '../../hooks/useServices';
+import { useTestimonials } from '../../hooks/useTestimonials';
 import PropertyViewer from './PropertyViewer';
 import PropertyForm from './PropertyForm';
 import AgentForm from './AgentForm';
 import BlogPostForm from './BlogPostForm';
 import ServiceForm from './ServiceForm';
+import TestimonialForm from './TestimonialForm';
+import ConfigurationForm from './ConfigurationForm';
 
 const AdminDashboard: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -18,7 +21,8 @@ const AdminDashboard: React.FC = () => {
   const { agents, loading: agentsLoading, refetch: refetchAgents, createAgent, updateAgent, deleteAgent } = useAgents();
   const { blogPosts, loading: blogLoading, refetch: refetchBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost } = useBlogPosts();
   const { services: allServices, loading: servicesLoading, refetch: refetchServices, createService, updateService, deleteService } = useServices();
-  
+  const { testimonials, loading: testimonialsLoading, refetch: refetchTestimonials, deleteTestimonial } = useTestimonials();
+
   const [activeTab, setActiveTab] = useState('properties');
   const [viewingProperty, setViewingProperty] = useState(null);
   const [showPropertyForm, setShowPropertyForm] = useState(false);
@@ -29,6 +33,8 @@ const AdminDashboard: React.FC = () => {
   const [editingBlogPost, setEditingBlogPost] = useState(null);
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [editingService, setEditingService] = useState(null);
+  const [showTestimonialForm, setShowTestimonialForm] = useState(false);
+  const [editingTestimonial, setEditingTestimonial] = useState(null);
 
   // Initialize Supabase Storage on component mount
   useEffect(() => {
@@ -144,7 +150,29 @@ const AdminDashboard: React.FC = () => {
     setEditingService(null);
     await refetchServices();
   }, [refetchServices]);
-  
+
+  const handleEditTestimonial = useCallback((testimonial: any) => {
+    setEditingTestimonial(testimonial);
+    setShowTestimonialForm(true);
+  }, []);
+
+  const handleDeleteTestimonial = useCallback(async (testimonialId: string) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este testimonio?')) {
+      try {
+        await deleteTestimonial(testimonialId);
+      } catch (error) {
+        console.error('Error deleting testimonial:', error);
+        alert(`Error al eliminar el testimonio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      }
+    }
+  }, [deleteTestimonial]);
+
+  const handleTestimonialSave = useCallback(async () => {
+    setShowTestimonialForm(false);
+    setEditingTestimonial(null);
+    await refetchTestimonials();
+  }, [refetchTestimonials]);
+
   const stats = {
     totalProperties: properties.length,
     activeProperties: properties.filter(p => p.type === 'venta').length,
@@ -282,6 +310,16 @@ const AdminDashboard: React.FC = () => {
                 }`}
               >
                 Servicios
+              </button>
+              <button
+                onClick={() => setActiveTab('testimonials')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'testimonials'
+                    ? 'border-yellow-500 text-yellow-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Testimonios
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
@@ -647,10 +685,76 @@ const AdminDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Settings Tab - sin cambios */}
+          {/* Testimonials Tab */}
+          {activeTab === 'testimonials' && (
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Gestión de Testimonios</h2>
+                <button
+                  onClick={() => setShowTestimonialForm(true)}
+                  className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-[#002430] px-4 py-2 rounded-lg font-semibold hover:from-yellow-500 hover:to-yellow-700 transition-colors duration-200 flex items-center space-x-2"
+                >
+                  <Plus size={18} />
+                  <span>Nuevo Testimonio</span>
+                </button>
+              </div>
+
+              {testimonialsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002430] mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Cargando testimonios...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {testimonials.map((testimonial) => (
+                    <div key={testimonial.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow duration-200">
+                      <div className="flex items-center space-x-4 mb-4">
+                        <img
+                          src={testimonial.image}
+                          alt={testimonial.name}
+                          className="w-16 h-16 rounded-full object-cover"
+                        />
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{testimonial.name}</h3>
+                          <p className="text-sm text-gray-600">{testimonial.role}</p>
+                          <div className="flex mt-1">
+                            {[...Array(testimonial.rating)].map((_, i) => (
+                              <span key={i} className="text-yellow-400">★</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                        {testimonial.content}
+                      </p>
+
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleEditTestimonial(testimonial)}
+                          className="flex-1 bg-blue-500 text-white py-2 px-3 rounded text-sm hover:bg-blue-600 transition-colors duration-200"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTestimonial(testimonial.id)}
+                          className="flex-1 bg-red-500 text-white py-2 px-3 rounded text-sm hover:bg-red-600 transition-colors duration-200"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="p-6">
-              {/* ... mismo contenido ... */}
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Configuración del Sitio</h2>
+              <ConfigurationForm />
             </div>
           )}
         </div>
@@ -695,6 +799,17 @@ const AdminDashboard: React.FC = () => {
             setEditingBlogPost(null);
           }}
           onSave={handleBlogSave}
+        />
+      )}
+
+      {showTestimonialForm && (
+        <TestimonialForm
+          testimonial={editingTestimonial}
+          onClose={() => {
+            setShowTestimonialForm(false);
+            setEditingTestimonial(null);
+          }}
+          onSave={handleTestimonialSave}
         />
       )}
     </div>
