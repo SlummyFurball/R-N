@@ -3,6 +3,7 @@ import { Calendar, Clock, Search, Filter, ChevronRight, Mail } from 'lucide-reac
 import { useBlogPosts } from '../hooks/useBlogPosts';
 import { BlogPost } from '../types';
 import { formatDate } from '../utils/formatters';
+import BlogPostModal from './BlogPostModal';
 
 const categories = ['Todos', 'Mercado', 'Consejos', 'Inversión'];
 
@@ -12,6 +13,7 @@ const Blog: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [email, setEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
   const blogs = dbBlogs;
 
@@ -42,8 +44,7 @@ const Blog: React.FC = () => {
   };
 
   const handleReadMore = (post: BlogPost) => {
-    // In a real app, this would navigate to the full blog post
-    console.log('Reading more about:', post.title);
+    setSelectedPost(post);
   };
 
   if (loading) {
@@ -283,6 +284,14 @@ const Blog: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {selectedPost && (
+        <BlogPostModal
+          post={selectedPost}
+          isOpen={!!selectedPost}
+          onClose={() => setSelectedPost(null)}
+        />
+      )}
     </section>
   );
 };
