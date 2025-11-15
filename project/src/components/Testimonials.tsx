@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Star, TrendingUp, Users, Award } from 'lucide-react';
-import { testimonials } from '../data/testimonials';
+import { useTestimonials } from '../hooks/useTestimonials';
 
 const Testimonials: React.FC = () => {
+  const { testimonials, loading } = useTestimonials();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
+    if (testimonials.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+      }, 5000);
 
-    return () => clearInterval(interval);
-  }, []);
+      return () => clearInterval(interval);
+    }
+  }, [testimonials.length]);
 
   const nextTestimonial = () => {
     setCurrentIndex((prev) => (prev + 1) % testimonials.length);
@@ -22,6 +25,23 @@ const Testimonials: React.FC = () => {
   };
 
   const currentTestimonial = testimonials[currentIndex];
+
+  if (loading) {
+    return (
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#002430]"></div>
+            <span className="ml-2 text-gray-600">Cargando testimonios...</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (testimonials.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-20 bg-white">
