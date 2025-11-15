@@ -1,27 +1,30 @@
 import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, Search, Filter, ChevronRight, Mail } from 'lucide-react';
-import { blogPosts } from '../data/blog';
+import { useBlogPosts } from '../hooks/useBlogPosts';
 import { BlogPost } from '../types';
 import { formatDate } from '../utils/formatters';
 
 const categories = ['Todos', 'Mercado', 'Consejos', 'Inversión'];
 
 const Blog: React.FC = () => {
+  const { blogPosts: dbBlogs, loading } = useBlogPosts();
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [email, setEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
+  const blogs = dbBlogs;
+
   const filteredPosts = useMemo(() => {
-    return blogPosts.filter((post) => {
+    return blogs.filter((post) => {
       const matchesCategory = selectedCategory === 'Todos' || post.category === selectedCategory;
       const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchTerm]);
+  }, [selectedCategory, searchTerm, blogs]);
 
-  const featuredPost = blogPosts[0];
+  const featuredPost = blogs[0];
   const regularPosts = filteredPosts.slice(1);
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
@@ -42,6 +45,19 @@ const Blog: React.FC = () => {
     // In a real app, this would navigate to the full blog post
     console.log('Reading more about:', post.title);
   };
+
+  if (loading) {
+    return (
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-gray-600">Cargando blogs...</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="blog" className="py-20 bg-white">
@@ -246,7 +262,7 @@ const Blog: React.FC = () => {
               <div className="bg-[#f4f4f2] p-6 rounded-lg">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Artículos Populares</h3>
                 <div className="space-y-4">
-                  {blogPosts.slice(0, 3).map((post) => (
+                  {blogs.slice(0, 3).map((post) => (
                     <div key={post.id} className="flex space-x-3">
                       <img
                         src={post.image}
