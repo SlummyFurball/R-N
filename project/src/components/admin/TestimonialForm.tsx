@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, User, Briefcase, MessageSquare, Star } from 'lucide-react';
+import { X, Upload, User, Briefcase, MessageSquare, Star, Trash2 } from 'lucide-react';
 import { useTestimonials } from '../../hooks/useTestimonials';
+import { supabase } from '../../lib/supabase';
 import { Testimonial } from '../../types';
 
 interface TestimonialFormProps {
@@ -20,6 +21,7 @@ const TestimonialForm: React.FC<TestimonialFormProps> = ({ testimonial, onClose,
   });
 
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (testimonial) {
@@ -39,6 +41,54 @@ const TestimonialForm: React.FC<TestimonialFormProps> = ({ testimonial, onClose,
       ...prev,
       [name]: name === 'rating' ? parseInt(value) : value
     }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona solo archivos de imagen');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen debe ser menor a 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `testimonial-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('property-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('property-images')
+        .getPublicUrl(data.path);
+
+      setFormData(prev => ({
+        ...prev,
+        image: publicUrl
+      }));
+
+      console.log(`Imagen "${file.name}" subida exitosamente`);
+      e.target.value = '';
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert(`Error al subir la imagen: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,23 +177,52 @@ const TestimonialForm: React.FC<TestimonialFormProps> = ({ testimonial, onClose,
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                URL de la Imagen *
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Foto de Perfil *
               </label>
-              <div className="relative">
-                <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                <input
-                  type="url"
-                  name="image"
-                  value={formData.image}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                  placeholder="https://images.pexels.com/photos/..."
-                />
+
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <label className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      className="hidden"
+                    />
+                    <div className="w-full px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:border-yellow-400 transition-colors duration-200 flex items-center justify-center space-x-2 bg-gray-50 hover:bg-yellow-50">
+                      <Upload size={16} className="text-gray-400" />
+                      <span className="text-gray-700">
+                        {uploadingImage ? 'Subiendo...' : 'Seleccionar imagen'}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="url"
+                    name="image"
+                    value={formData.image}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    placeholder="O pega la URL de una imagen (fallback)"
+                  />
+                  {formData.image && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Recomendamos usar fotos de perfil cuadradas de Pexels
+
+              <p className="text-sm text-gray-500 mt-2">
+                Sube una imagen directamente (máx 5MB) o pega una URL. Las imágenes subidas se guardan de forma permanente.
               </p>
             </div>
 
