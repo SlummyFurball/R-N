@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, User, Mail, Phone, Briefcase } from 'lucide-react';
+import { X, Upload, User, Mail, Phone, Briefcase, Trash2 } from 'lucide-react';
 import { useAgents } from '../../hooks/useAgents';
+import { supabase } from '../../lib/supabase';
 import { Agent } from '../../types';
 
 interface AgentFormProps {
@@ -22,6 +23,7 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (agent) {
@@ -45,15 +47,69 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
     }));
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona solo archivos de imagen');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen debe ser menor a 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `agent-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('property-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('property-images')
+        .getPublicUrl(data.path);
+
+      setFormData(prev => ({
+        ...prev,
+        photo: publicUrl
+      }));
+
+      console.log(`Imagen "${file.name}" subida exitosamente`);
+      e.target.value = '';
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert(`Error al subir la imagen: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Remove description from formData if it's empty to avoid sending null values
+      const dataToSend = { ...formData };
+      if (!dataToSend.description || dataToSend.description.trim() === '') {
+        delete dataToSend.description;
+      }
+
       if (agent) {
-        await updateAgent(agent.id, formData);
+        await updateAgent(agent.id, dataToSend);
       } else {
-        await createAgent(formData);
+        await createAgent(dataToSend);
       }
       
       onSave();
@@ -207,25 +263,54 @@ const AgentForm: React.FC<AgentFormProps> = ({ agent, onClose, onSave }) => {
               </p>
             </div>
 
-            {/* Photo URL */}
+            {/* Photo Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                URL de la Foto *
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Foto de Perfil *
               </label>
-              <div className="relative">
-                <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                <input
-                  type="url"
-                  name="photo"
-                  value={formData.photo}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                  placeholder="https://ejemplo.com/foto.jpg"
-                />
+
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <label className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      className="hidden"
+                    />
+                    <div className="w-full px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:border-yellow-400 transition-colors duration-200 flex items-center justify-center space-x-2 bg-gray-50 hover:bg-yellow-50">
+                      <Upload size={16} className="text-gray-400" />
+                      <span className="text-gray-700">
+                        {uploadingImage ? 'Subiendo...' : 'Seleccionar imagen'}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="url"
+                    name="photo"
+                    value={formData.photo}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    placeholder="O pega la URL de una imagen (fallback)"
+                  />
+                  {formData.photo && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, photo: '' }))}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Ingresa la URL de una imagen profesional del agente. Recomendamos usar imágenes de Pexels.
+
+              <p className="text-sm text-gray-500 mt-2">
+                Sube una imagen directamente desde tu computadora (máx 5MB) o pega una URL. Las imágenes subidas se guardan de forma permanente.
               </p>
             </div>
 
